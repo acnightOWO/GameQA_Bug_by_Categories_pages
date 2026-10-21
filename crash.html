@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>當機 · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html" aria-current="page">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">主題 1 / 5</div>
+  <h1>當機</h1>
+  <p class="lede">當機是最容易「認出來」的 bug：遊戲直接關掉，沒有人會爭論它算不算錯。真正的難題在認出之前和之後：怎麼把遊戲玩到當掉、怎麼依一份模糊的回報重新走到當機那一刻，以及收到幾萬份回報後先修哪一個。</p>
+
+  <div class="scene">
+    <span class="tag">示意情境</span>
+    <p>一份 Minecraft 的回報寫著：「我在下界蓋了一座傳送門，帶著一箱物品跳進去，回到主世界的瞬間遊戲就關了。」報告裡有一段 stack trace，但沒有存檔、沒有確切步驟，遊戲版本也比現在舊了三版。開發者要先重現它，才能開始修。</p>
+  </div>
+
+  <h2>問題怎麼定義</h2>
+  <p>Truelove 等人把 Crash 定義為「遊戲當掉或被迫關閉」。在他們標記的 12,122 筆修正裡，當機出現 580 次，其中 219 次出現在緊急更新，比例 38%，是所有類別裡最高的；它也是最常在後續版本再次出現的類別。</p>
+  <p>當機的研究可以照時間軸分成三段：<strong>開發中</strong>讓自動化程式把遊戲玩到當掉；<strong>收到回報後</strong>依玩家的描述重新走到當機那一刻；<strong>上線後</strong>從大量當機紀錄裡判斷先修哪一個。三段用的方法完全不同。</p>
+
+  <h2>現在的做法</h2>
+
+  <section class="school">
+    <div class="label">流派一 · 自動探索 agent（開發中）</div>
+    <h3>讓 agent 自己玩，玩到出事為止</h3>
+    <p>這一派的共同想法是：讓 agent 自動玩遊戲，同時用內建的自動判定（oracle）標出異常，例如遊戲是否當掉、任務是否卡住。差別在於誰來決定下一步操作：早期用強化學習，近年改用 LLM。</p>
+    <p>強化學習的代表是 Wuji。Wuji（ASE 2019，網易伏羲與天津大學等）先分析了 4 款商業遊戲的 1,349 個真實 bug，歸納出 4 種自動判定方法，再用演化演算法加上深度強化學習，讓 agent 在「贏下戰鬥」和「探索沒去過的地方」之間取得平衡。它在兩款商業遊戲中找到 3 個先前未知、經開發者確認的 bug。</p>
+    <p>到了 LLM 的時代，浙江大學與網易伏羲的 TITAN 讓 GPT-4o 驅動的 agent 玩兩款商業 MMORPG，並用三種自動判定（是否當機、任務是否卡住、執行是否超時）把異常整理成診斷報告。</p>
+    <figure class="figure">
+      <div class="figtitle">LLM agent 抓到的注入 bug 是強化學習的近兩倍；人類完成了全部任務，卻只抓到 18%</div>
+      <div class="figsub">TITAN 論文中，兩款商業 MMORPG 上的任務完成率與注入 bug 偵測率</div>
+      <div class="chart" id="ch-titan"></div>
+      <figcaption>資料：Wang 等人，Leveraging LLM Agents for Automated Video Game Testing（TITAN），arXiv 2509.22170。論文內文說注入了 9 個 bug，但兩款遊戲的表格合計是 15 個，前後不一致；百分比也沒有說明如何換算。Wuji 與 ReAct 的數字在論文中以「約」表示。</figcaption>
+    </figure>
+    <p>TITAN 另外找到 4 個先前測試沒抓到的 bug，並已部署在 8 條實際的遊戲 QA 流程中。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派二 · 從回報到重現（收到回報後）</div>
+    <h3>讀玩家的回報，把當機重新走一遍</h3>
+    <p>這條路線先在 Android app 上成熟。ReCDroid 用自然語言處理加上 GUI 探索；AdbGPT（ICSE 2024）讓 LLM 先把回報拆成步驟，再在畫面上依序執行，作者報告 81.3% 的重現率。不過當別人用自己的資料重新評估時，數字差異很大：</p>
+    <figure class="figure">
+      <div class="figtitle">AdbGPT 自報 81%，兩份獨立重測分別是 74% 和 36%</div>
+      <div class="figsub">Android bug 回報重現率：作者自報 vs 兩份他人重測</div>
+      <div class="chart" id="ch-android"></div>
+      <figcaption>資料：AdbGPT 自報值出自 Feng &amp; Chen, ICSE 2024（48 份一般 bug 回報，不限當機；同一篇裡 ReCDroid 是 45.8%）；重測 A 出自 ReBL 論文（73 份當機回報）；重測 B 出自 BugRepro 論文（151 份回報，ReCDroid 重現 38 份、AdbGPT 55 份）。兩份重測都是提出新工具的論文所做，資料集也不同，所以只適合看量級。</figcaption>
+    </figure>
+    <p>遊戲版本的代表是 BugCraft（ASE 2025）。作者從 Minecraft 官方的 bug 追蹤系統挑出 100 份單人模式的當機回報，排除 14 份無法重現的，剩下 86 份組成 BugCraft-Bench。系統分兩步：先讓 LLM 把回報整理成重現步驟，再由看得懂畫面的 agent 透過一套為 Minecraft 寫的指令集在遊戲裡執行。</p>
+    <figure class="figure">
+      <div class="figtitle">專為遊戲設計的流程贏過通用的電腦操作 agent，但仍只重現三分之一</div>
+      <div class="figsub">BugCraft-Bench 86 份 Minecraft 當機回報的端到端重現率</div>
+      <div class="chart" id="ch-bugcraft"></div>
+      <figcaption>資料：Yapağcı 等人，Agents in the Sandbox，ASE 2025（arXiv 2503.20036 v2，表 III）。</figcaption>
+    </figure>
+    <p>失敗發生在兩個地方。第一步「把回報整理成步驟」就有三分之一是錯的：</p>
+    <figure class="figure">
+      <div class="figtitle">GPT-4o 生成的重現步驟，三分之一有錯</div>
+      <div class="figsub">86 份回報的步驟生成結果；有錯的 29 份再依錯誤原因拆解（一份可能同時有多種錯）</div>
+      <div class="chart" id="ch-steps"></div>
+      <figcaption>資料：BugCraft 表 I。</figcaption>
+    </figure>
+    <p>第二步「照步驟執行」也不容易。在 57 份步驟正確的回報裡，agent 只成功了 22 份，常見的失敗是卡在迴圈或做出錯誤判斷；29 份步驟有錯的回報中，只有 4 份被 agent 自己繞回正軌。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派三 · 當機紀錄分流（上線後）</div>
+    <h3>從大量當機紀錄裡，挑出會擴散的那幾個</h3>
+    <p>上線之後問題變了：當機紀錄不缺，缺的是判斷先修哪一個。Weeraddana、Habchi（Ubisoft La Forge）與 McIntosh 分析了 Ubisoft 遊戲上線後的當機，發現大部分當機類型只影響少數玩家，但有一小群會快速擴散。他們把這群稱為「病毒式」當機：有的一上線就爆發，有的先潛伏一陣子才擴散。</p>
+    <p>他們用前一款已上線遊戲的資料，預測新遊戲裡哪些當機會變成病毒式。結果是，比較 stack trace 的相似度，表現勝過機器學習模型，能找出超過一半的病毒式當機類型。</p>
+  </section>
+
+  <h2>現在卡在哪裡</h2>
+  <ol class="problems">
+    <li><strong>遊戲版的重現 benchmark 只有一款遊戲。</strong>BugCraft-Bench 的 86 份回報全部來自 Minecraft 單人模式。在其他遊戲上，類似流程能做到多少，目前沒有資料。</li>
+    <li><strong>每款遊戲都要重寫操作介面。</strong>BugCraft 依賴一套 Minecraft 專用的指令集；不用這套指令集的通用電腦操作 agent，最好的是 25.5%，開源的 UI-TARS 是 0%。</li>
+    <li><strong>遊戲比 app 多了空間和狀態。</strong>BugCraft 的作者指出，Android 的方法把畫面轉成文字處理，但遊戲需要空間推理、複雜的狀態相依和隨版本改變的機制，這些是 2D 介面的方法處理不到的。</li>
+    <li><strong>回報本身就不完整。</strong>100 份回報裡有 14 份連人都無法重現；能重現的回報中，LLM 整理出的步驟有三分之一缺步驟、下錯指令或邏輯不通。</li>
+    <li><strong>自報數字和重測數字落差很大。</strong>AdbGPT 自報 81.3%，兩份重測分別是 74% 和約 36%。評估資料不同，同一個工具的表現可以差到一倍以上。</li>
+    <li><strong>探索式測試的成績多半來自注入的 bug。</strong>TITAN 的 bug 偵測率是在 9 個人為放進去的 bug 上量的；在真實、未知的 bug 上能找到多少，只能從「找到幾個新 bug」這類個案數字推估。</li>
+    <li><strong>上線後的分流仍漏掉不少。</strong>Ubisoft 的研究中，最好的方法找出超過一半的病毒式當機類型，也就是說仍有相當比例在擴散之前沒被標出來；不過被找出的類型涵蓋的當機次數，明顯多於漏掉的。</li>
+  </ol>
+
+  <p>當機至少有一個好處：它發生時沒有人會懷疑。接下來四頁的 bug 都沒有這個好處，遊戲照常執行，只是某個地方「看起來不對」。第一個要看的，是研究最多的畫面渲染。</p>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>A. Truelove 等人. We'll Fix It in Post. <a href="https://arxiv.org/abs/2103.03997">arXiv 2103.03997</a></li>
+    <li>Y. Zheng 等人. Wuji: Automatic Online Combat Game Testing Using Evolutionary Deep Reinforcement Learning. ASE 2019. <a href="https://conf.researchr.org/details/ase-2019/ase-2019-papers/39/Wuji-Automatic-Online-Combat-Game-Testing-Using-Evolutionary-Deep-Reinforcement-Lear">連結</a></li>
+    <li>C. Wang 等人. Leveraging LLM Agents for Automated Video Game Testing（TITAN）. <a href="https://arxiv.org/abs/2509.22170">arXiv 2509.22170</a></li>
+    <li>S. Feng, C. Chen. Prompting Is All You Need: Automated Android Bug Replay with LLMs（AdbGPT）. ICSE 2024. <a href="https://arxiv.org/abs/2306.01987">arXiv 2306.01987</a></li>
+    <li>ReBL 重測（73 份當機回報）. <a href="https://par.nsf.gov/servlets/purl/10545226">NSF PAR</a></li>
+    <li>BugRepro 重測（151 份回報）. <a href="https://arxiv.org/abs/2505.14528">arXiv 2505.14528</a></li>
+    <li>E. Yapağcı 等人. Agents in the Sandbox: End-to-End Crash Bug Reproduction for Minecraft（BugCraft）. ASE 2025. <a href="https://arxiv.org/abs/2503.20036">arXiv 2503.20036</a></li>
+    <li>N. R. Weeraddana, S. Habchi, S. McIntosh. Crash Report Prioritization for Large-Scale Scheduled Launches. ICSE SEIP 2025. <a href="https://rebels.cs.uwaterloo.ca/papers/icse2025seip_weeraddana.pdf">PDF</a></li>
+  </ol>
+
+  <div class="pagenav"><a href="index.html">← 總覽</a><a href="graphics.html">下一頁：畫面渲染 →</a></div>
+</main>
+
+<script>
+Charts.grouped('#ch-titan', {
+  title: 'TITAN、Wuji、ReAct 與人類的任務完成率和 bug 偵測率',
+  groups: ['任務完成率', '注入 bug 偵測率'],
+  series: [
+    { name: 'TITAN（LLM agent）', color: 'var(--accent)', values: [95, 82] },
+    { name: 'Wuji（強化學習）', color: 'var(--c2)', values: [82, 45.5] },
+    { name: 'ReAct（一般 LLM agent）', color: 'var(--c3)', values: [83, 45.5] },
+    { name: '人類測試者', color: 'var(--grey)', values: [100, 18] }
+  ],
+  max: 100, unit: '%', ticks: [0, 50, 100], showValues: true, decimals: 0
+});
+Charts.hbar('#ch-android', {
+  title: 'Android bug 回報重現率', max: 100, unit: '%', ticks: [0, 50, 100], decimals: 1, labelWidth: 230,
+  rows: [
+    { label: 'AdbGPT（作者自報）', value: 81.3, color: 'var(--c3)' },
+    { label: 'AdbGPT（重測 A，73 份）', value: 73.97, hl: true, text: '74.0%' },
+    { label: 'ReproBot（重測 A）', value: 65.75, text: '65.8%' },
+    { label: 'ReCDroid（重測 A）', value: 45.21, text: '45.2%' },
+    { label: 'AdbGPT（重測 B，151 份）', value: 36.4, hl: true },
+    { label: 'ReCDroid（重測 B）', value: 25.2 }
+  ]
+});
+Charts.hbar('#ch-bugcraft', {
+  title: 'BugCraft-Bench 重現率',
+  max: 100, unit: '%', ticks: [0, 50, 100], decimals: 1, labelWidth: 210,
+  rows: [
+    { label: 'BugCraft（GPT-4.1）', value: 34.9, hl: true },
+    { label: 'BugCraft（GPT-4o）', value: 30.2 },
+    { label: 'OpenAI 電腦操作 agent', value: 25.5 },
+    { label: 'UI-TARS-1.5-7B', value: 0 }
+  ]
+});
+Charts.hbar('#ch-steps', {
+  title: 'BugCraft 步驟生成結果',
+  max: 60, ticks: [0, 30, 60], decimals: 0, labelWidth: 210,
+  rows: [
+    { label: '步驟正確', value: 57, color: 'var(--good)', text: '57 份' },
+    { label: '步驟有錯', value: 29, hl: true, text: '29 份' },
+    { label: '　└ 下錯指令', value: 14, color: 'var(--grey)', text: '14' },
+    { label: '　└ 缺少步驟', value: 10, color: 'var(--grey)', text: '10' },
+    { label: '　└ 邏輯錯誤', value: 9, color: 'var(--grey)', text: '9' }
+  ]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>動作與互動 · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html" aria-current="page">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">主題 4 / 5</div>
+  <h1>動作與互動</h1>
+  <p class="lede">按了跳卻沒跳、變身之後不能往左走、拉了機關門沒開。這類 bug 的困難有兩層：要先在無數種操作組合裡走到出錯的那一條路，走到之後，還得知道「本來應該發生什麼」。</p>
+
+  <div class="scene">
+    <span class="tag">真實案例</span>
+    <p>Truelove 等人在 Black Desert Online 的更新說明裡看到一條修正：「修正了變身為不死柿子騎士時，無法向左或向右奔跑的問題。」問題看起來像位置錯誤，但核心是「做不到本來做得到的動作」，因此被歸為 Action 類。</p>
+  </div>
+
+  <h2>問題怎麼定義</h2>
+  <p>Truelove 的分類裡，這個主題包括 <strong>Action</strong>（能不能執行某個動作出錯）、<strong>Triggered Event</strong>（A 該觸發 B 卻沒有）和 <strong>Context State</strong>（物件沒有正確進出狀態）。Action 是更新說明裡第三常見的類別，Triggered Event 則是第三常復發、嚴重度也排前面的類別。</p>
+  <p>開發者在問卷裡講得很直接：遊戲的動作很多，同一時間只有部分能用，結果又看情境、甚至看隨機性；要測遍每一種情境下的每一種動作順序，「通常在組合上是不可能的」。</p>
+  <p>這個主題還有一個其他主題沒有的特性：<strong>很多問題光看畫面，原理上就分不出來</strong>。按住前進卻沒有移動，跟玩家本來就站著不動，錄下來的畫面一模一樣。要判斷，得知道玩家按了什麼。</p>
+
+  <h2>現在的做法</h2>
+
+  <p>這個主題的研究可以照 bug 的兩層困難來排：前兩派處理「走到」，第三派讓 LLM 同時負責走和判斷，第四派處理「認出」。</p>
+
+  <section class="school">
+    <div class="label">流派一 · 強化學習與演化探索</div>
+    <h3>讓 agent 一邊贏、一邊往沒去過的地方走</h3>
+    <p>這條路線的代表是〈當機〉那一頁介紹過的 Wuji：用演化演算法搭配深度強化學習，讓 agent 同時追求「把戰鬥打贏」和「探索新的狀態」，因為探索得越廣，越有機會撞上 bug。</p>
+    <p>EA SEED 也走同一條路。Bergdahl 等人（CoG 2020）在幾個自製的沙盒關卡裡訓練強化學習 agent，跟依導航網格行走的腳本 agent 比較：強化學習 agent 會自己學會從缺了碰撞的牆穿過去，也找出了關卡裡預先放好的五個卡住玩家的地點。作者估計，同時跑的 agent 每秒可以做 3 萬個動作，相當於 3,000 個人類玩家。</p>
+    <p>為了讓這類方法可以互相比較，Li 等人建立了 GBGallery（EMSE 2022）：5 款商業遊戲、76 個真實的工業 bug，bug 編譯在執行檔裡，可以逐一開關，並附有內建的判定程式，基線包括隨機、DQN、A2C、加好奇心的 A2C 與 Wuji。作者的結論是，自動化遊戲測試「還在很早期的階段」。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派二 · 用好奇心與新奇度引導探索</div>
+    <h3>往沒見過、最意外的地方走，bug 應該就在那裡</h3>
+    <p>強化學習本身不知道哪裡可能有 bug，所以一個常見的做法是加上「好奇心」，獎勵 agent 去沒見過的狀態；GBGallery 的基線裡就有加了好奇心的 A2C。同一組 EA 研究者的 Gordillo 等人（2021）用「越少去過的地方獎勵越高」的計數式好奇心，讓 320 個 agent 探索一張 500 公尺見方的地圖，大約 24 小時可以走遍 90% 的地圖，並找出了預先放進去的卡點和出界漏洞。更進一步的假設是：如果一個模型學會了遊戲正常時長什麼樣，那它最「驚訝」的地方，就可能是 bug。Huynh 與 Pham 在 ACGB 的遊戲裡藏了只在特定區域觸發的 bug，讓五種 agent 各走 2,000 步：隨機亂按、知道遊戲狀態的腳本（只當參考）、兩種獎勵新奇的策略（計數式、RND），以及追求驚訝的策略。結果跟直覺相反：</p>
+    <figure class="figure">
+      <div class="figtitle">追求驚訝的 agent，找到的 bug 比亂按還少</div>
+      <div class="figsub">各探索策略觸發 bug 與找到 bug 的比例（每個遊戲 80 個有 bug 的關卡）</div>
+      <div class="chart" id="ch-explore"></div>
+      <figcaption>資料：Huynh &amp; Pham，表 9。「腳本」是知道遊戲狀態的特權策略，作為參考。</figcaption>
+    </figure>
+    <figure class="figure">
+      <div class="figtitle">而且在乾淨的關卡上，誤報多了將近 15 倍</div>
+      <div class="figsub">在沒有 bug 的關卡上，每 1,000 步的誤報次數</div>
+      <div class="chart" id="ch-fa"></div>
+      <figcaption>資料：Huynh &amp; Pham，表 9。作者的解讀是：追求驚訝會把 agent 帶到偵測器本身沒見過的畫面，警報因此幾乎響個不停。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派三 · LLM agent</div>
+    <h3>讓會推理的模型自己玩，自己判斷哪裡不對</h3>
+    <p>GBQA（ICLR 2026 workshop）把 LLM 當成 QA 工程師來考：30 款以多 agent 系統生成的遊戲，注入 124 個經人工確認的 bug，分成三個難度。簡單的看一眼就知道，中等的要觀察一小段操作才看得出違反規則，困難的要追蹤很長一段操作才看得出矛盾。agent 用多輪推理加記憶，最多走 500 步。論文比較了兩種設定：像一般玩家一樣探索，以及明確以找 bug 為目標的「QA 模式」。</p>
+    <figure class="figure">
+      <div class="figtitle">開啟推理模式，每個模型找到的 bug 都變多；最好的也不到一半</div>
+      <div class="figsub">GBQA 的 bug recall（QA 模式，500 步）：一般模式 → 推理模式</div>
+      <div class="chart" id="ch-gbqa"></div>
+      <figcaption>資料：Jiang、Chen、Chen，GBQA，arXiv 2604.02648，主結果表。只列出同時有一般版與推理版的模型系列。</figcaption>
+    </figure>
+    <p>步數也有影響：Claude-4.6-Opus 在 QA 模式下，步數上限從 50 拉到 500，recall 從 22.58% 升到 37.90%。作者觀察到，簡單的 bug 大多在前 300 步就找到，困難的 bug 到 500 步都還看不到飽和。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派四 · 把玩家輸入一起納入判斷</div>
+    <h3>不只看畫面，也看玩家按了什麼</h3>
+    <p>既然有些互動 bug 只看畫面分不出來，最直接的想法就是把輸入也交給偵測器。Huynh 與 Pham 為此做了 ACGB（這份研究目前是預印本）：5 個 64×64 像素的 2D 小遊戲，8 種程式化注入的 glitch，每段有 glitch 的影片都用同一串操作再跑一次沒有 glitch 的版本當對照。其中兩種是專門為「需要輸入」設計的：<strong>卡在原地</strong>（有輸入、有動畫，位置卻被釘住）和<strong>按鍵錯亂</strong>（動作看起來合理，只是跟按鍵對不上）。比較的偵測器包括〈時間性〉那一頁的外觀距離方法、只看畫面變化量的「動作量」基線，以及小型的像素預測器（預測下一格畫面長什麼樣，可選擇是否告訴它玩家按了什麼）。</p>
+    <figure class="figure">
+      <div class="figtitle">只看畫面的方法在「按鍵錯亂」上接近隨機；把輸入加進小型像素預測器，一舉拉到 0.87</div>
+      <div class="figsub">ACGB 開發集上的 AUROC：全部類別平均，以及兩種需要輸入的 glitch</div>
+      <div class="chart" id="ch-acgb"></div>
+      <figcaption>資料：Huynh &amp; Pham，When Do Latent World Models Detect Game Glitches?，表 8。只列出部分偵測器；保留的測試集結果還沒公布。</figcaption>
+    </figure>
+    <p>不過輸入不是加了就有用。作者的 world model（LeWM，預測抽象特徵而不是像素）加上輸入之後，全部類別平均反而從 0.625 降到 0.605，在按鍵錯亂上兩者都低於隨機。作者推測，抽象特徵丟掉了判斷位移所需的細節。</p>
+  </section>
+
+  <h2>現在卡在哪裡</h2>
+  <ol class="problems">
+    <li><strong>「沒找到」分不出是沒走到，還是沒認出。</strong>GBQA 只報告一個 recall。ACGB 把兩者分開後發現，隨機策略觸發的 bug 有 0.718 被認了出來，大部分沒找到的 bug 是根本沒被走到。驚訝策略的 0.877 看似更高，但作者指出那是因為警報幾乎響個不停，找到的比例跟亂猜的對照組（0.220）差不多。</li>
+    <li><strong>只看畫面，原理上就有盲區。</strong>只看畫面的方法在按鍵錯亂上接近或低於隨機：VideoMAE 外觀距離 0.42、V-JEPA 2 0.52。</li>
+    <li><strong>引導探索的目標會把 agent 帶偏。</strong>以「驚訝」為目標的 agent 觸發 bug 的比例（0.275）比亂按（0.435）低，誤報卻多了近 15 倍。</li>
+    <li><strong>困難的 bug 需要很長的操作序列。</strong>GBQA 的困難 bug 到 500 步都還沒飽和；開發者也說，所有情境下的所有動作順序在組合上不可能測完。</li>
+    <li><strong>評測用的 bug 幾乎都是人工注入的。</strong>GBQA 的遊戲和 bug 都由多 agent 系統生成再注入，ACGB 的五款 64×64 小遊戲有四款是作者自己寫的（另一款是 MiniGrid），TITAN 用 9 個注入的 bug。真實互動 bug 的分布和難度跟這些 benchmark 像不像，沒有人驗證。</li>
+    <li><strong>幾乎沒有公開可用的資料。</strong>GBQA 和 ACGB 都還沒公開；GBGallery 只有執行檔，看不到遊戲內部；World of Bugs（一個可開關注入 bug 的 Unity 測試平台）2022 年後就沒再維護。</li>
+  </ol>
+
+  <p>互動 bug 的困難，有一半是「不知道本來應該發生什麼」。最後一頁的資訊類 bug 把這個問題推到極端：畫面完全正常，只是上面寫的東西錯了。</p>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>J. Bergdahl, C. Gordillo, K. Tollmar, L. Gisslén. Augmenting Automated Game Testing with Deep Reinforcement Learning. IEEE CoG 2020. <a href="https://arxiv.org/abs/2103.15819">arXiv 2103.15819</a></li>
+    <li>C. Gordillo, J. Bergdahl, K. Tollmar, L. Gisslén. Improving Playtesting Coverage via Curiosity Driven Reinforcement Learning Agents. <a href="https://arxiv.org/abs/2103.13798">arXiv 2103.13798</a></li>
+    <li>A. Truelove 等人. We'll Fix It in Post. <a href="https://arxiv.org/abs/2103.03997">arXiv 2103.03997</a></li>
+    <li>Y. Zheng 等人. Wuji. ASE 2019. <a href="https://conf.researchr.org/details/ase-2019/ase-2019-papers/39/Wuji-Automatic-Online-Combat-Game-Testing-Using-Evolutionary-Deep-Reinforcement-Lear">連結</a></li>
+    <li>Z. Li 等人. GBGallery: A benchmark and framework for game testing. EMSE 27(6), 2022. <a href="https://dl.acm.org/doi/10.1007/s10664-022-10158-x">連結</a> · <a href="https://sites.google.com/view/gbgallery">網站</a></li>
+    <li>S. Jiang, C. Chen, Z. Chen. GBQA: A Game Benchmark for Evaluating LLMs as Quality Assurance Engineers. ICLR 2026 Workshop. <a href="https://arxiv.org/abs/2604.02648">arXiv 2604.02648</a></li>
+    <li>C. Wang 等人. TITAN. <a href="https://arxiv.org/abs/2509.22170">arXiv 2509.22170</a></li>
+    <li>D. T. Huynh, N. N. Pham. When Do Latent World Models Detect Game Glitches?（含 ACGB）. <a href="https://doi.org/10.5281/zenodo.23449952">Zenodo</a></li>
+    <li>B. Wilkins, K. Stathis. World of Bugs. <a href="https://arxiv.org/abs/2206.11037">arXiv 2206.11037</a></li>
+  </ol>
+
+  <div class="pagenav"><a href="temporal.html">← 時間性</a><a href="information.html">下一頁：資訊與介面 →</a></div>
+</main>
+
+<script>
+Charts.slope('#ch-gbqa', {
+  title: 'GBQA：一般模式與推理模式的 recall',
+  x: ['一般模式', '推理模式'], min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50], unit: '%', decimals: 1, height: 380,
+  series: [
+    { name: 'Claude-4.6-Opus', values: [37.90, 48.39], hl: true },
+    { name: 'Qwen3.5-397B', values: [24.19, 41.13] },
+    { name: 'Claude-4.5-Sonnet', values: [32.26, 37.10] },
+    { name: 'Qwen3-235B', values: [18.55, 35.48] },
+    { name: 'Qwen3-32B', values: [15.32, 33.87] },
+    { name: 'Kimi-K2.5', values: [20.97, 28.23] },
+    { name: 'Qwen3-8B', values: [10.48, 24.19] }
+  ]
+});
+Charts.grouped('#ch-acgb', {
+  title: 'ACGB 偵測器 AUROC',
+  groups: ['外觀距離\nVideoMAE', '外觀距離\nV-JEPA 2', '動作量\n基線', 'world model\n加輸入', '像素預測\n不加輸入', '像素預測\n加輸入'],
+  series: [
+    { name: '全部類別平均', color: 'var(--grey)', values: [0.639, 0.706, 0.660, 0.605, 0.783, 0.888] },
+    { name: '卡在原地', color: 'var(--c2)', values: [0.612, 0.661, 0.626, 0.511, 0.691, 0.846] },
+    { name: '按鍵錯亂', color: 'var(--accent)', values: [0.420, 0.518, 0.455, 0.458, 0.531, 0.867] }
+  ],
+  min: 0, max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 2, ref: 0.5, refLabel: '隨機 0.5', height: 340
+});
+Charts.grouped('#ch-explore', {
+  title: 'ACGB 探索策略：觸發與找到 bug 的比例',
+  groups: ['隨機亂按', '腳本（特權）', '計數式新奇', 'RND 新奇', '追求驚訝'],
+  series: [
+    { name: '觸發了 bug', color: 'var(--grey)', values: [0.435, 0.465, 0.380, 0.297, 0.275] },
+    { name: '找到了 bug', color: 'var(--accent)', values: [0.322, 0.355, 0.338, 0.270, 0.258] }
+  ],
+  max: 0.5, ticks: [0, 0.25, 0.5], tickDecimals: 2, decimals: 3, showValues: true
+});
+Charts.hbar('#ch-fa', {
+  title: '每 1,000 步誤報次數', max: 300, ticks: [0, 150, 300], decimals: 1, labelWidth: 170,
+  rows: [
+    { label: '隨機亂按', value: 20.3 },
+    { label: '腳本（特權）', value: 22.6 },
+    { label: 'RND 新奇', value: 53.4 },
+    { label: '計數式新奇', value: 128.2 },
+    { label: '追求驚訝', value: 297.4, hl: true }
+  ]
+});
+</script>
+</body>
+</html>

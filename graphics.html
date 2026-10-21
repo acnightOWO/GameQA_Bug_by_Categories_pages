@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>畫面渲染 · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html" aria-current="page">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">主題 2 / 5</div>
+  <h1>畫面渲染</h1>
+  <p class="lede">一大片洋紅色蓋住地面、整個畫面變成雜訊、角色的手臂穿過牆。這是研究最多的一類，也是自動化做得最好的一類。但「做得好」大多發生在公開的 benchmark 上，換成遊戲公司內部的開發資料，成績就掉了一大截。</p>
+
+  <div class="scene">
+    <span class="tag">示意情境</span>
+    <p>新版的材質打包流程漏了一張貼圖。在大部分手機上，那片地面變成一大塊不正常的色塊；但在某些 GPU 上，同一個 bug 的色塊顏色又不一樣。網易的 GLIB 團隊在真實報告裡就遇過這種情況：同一個 bug，在不同裝置上長得不一樣。</p>
+  </div>
+
+  <h2>問題怎麼定義</h2>
+  <p>Truelove 等人的定義是「遊戲世界的某個視覺部分被渲染錯誤」。它在 Steam 更新說明裡是第二常見、也是第二常復發的類別；開發者的解釋是畫面的邊角情況太多、測不完，而且畫面對不對本來就有主觀成分。</p>
+  <p>這類 bug 有一個方便的特性：<strong>多數單看一張畫面就能判斷</strong>，不需要時間脈絡，也不需要知道玩家做了什麼。所以這一類累積了最多的方法和資料。</p>
+
+  <h2>現在的做法</h2>
+
+  <section class="school">
+    <div class="label">流派一 · 監督式學習</div>
+    <h3>自己造出大量壞掉的畫面，訓練分類器</h3>
+    <p>真實的 glitch 截圖很少，這條路線的核心問題是「訓練資料從哪來」。EA SEED 2020 年的做法是在引擎裡直接把貼圖弄壞：拉伸、降解析度、拿掉、換成開發用的暫代貼圖，產生大量樣本訓練 CNN，在正常加四種貼圖錯誤的分類上達到 86.8% 準確率。</p>
+    <p>網易的 GLIB（FSE 2021）更進一步：直接修改遊戲的渲染程式碼來產生 glitch，例如關掉負責渲染的攝影機、改錯畫面清除的設定。作者也發現，用固定幾種顏色畫假色塊的規則方法會漏掉真實 bug，因為特殊 GPU 上的色塊顏色跟預設的不同。比較不同資料增強方式的結果，可以看出「訓練資料長得像不像真的 bug」決定了一切。這裡用 recall 衡量，也就是真的 glitch 裡抓到多少：</p>
+    <figure class="figure">
+      <div class="figtitle">只用真實 bug 截圖訓練，將近一半的 glitch 抓不到；改用程式碼生成的資料，recall 接近 100%</div>
+      <div class="figsub">GLIB 論文中，同一個 CNN 搭配不同訓練資料的 recall（測試集：192 張真實 glitch 截圖）</div>
+      <div class="chart" id="ch-glib"></div>
+      <figcaption>資料：Chen 等人，GLIB，FSE 2021，表 3。所有方法的 precision（報出來的有多少是真的）都在 0.93 以上，GLIB 為 1.00。這個接近滿分的數字要搭配下方「現在卡在哪裡」第 3 點一起看。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派二 · 只學正常畫面（自編碼器）</div>
+    <h3>不給壞掉的例子，重建不回來的就是異常</h3>
+    <p>監督式學習需要壞掉的樣本；另一條較早的路線乾脆不要。Wilkins 與 Stathis（2022）在自己做的 Unity 平台 World of Bugs 上，只拿正常畫面訓練一個卷積自編碼器：模型學會把正常畫面壓縮再還原，遇到還原不回來的畫面，就判為異常。他們測了十種畫面 bug，結果很兩極：</p>
+    <figure class="figure">
+      <div class="figtitle">黑畫面、貼圖遺失幾乎全抓得到；穿模和深度裁切類幾乎抓不到</div>
+      <div class="figsub">自編碼器在 World of Bugs 十種 bug 上的 precision-recall AUC（門檻 τ = 0）</div>
+      <div class="chart" id="ch-ae"></div>
+      <figcaption>資料：Wilkins &amp; Stathis，Learning to Identify Perceptual Bugs in 3D Video Games，arXiv 2202.12884，表 I。畫面為 84×84 的 agent 視角；每種 bug 約 5 萬張測試畫面。</figcaption>
+    </figure>
+    <p>後續研究的分析指出，這些失敗多半發生在物體背面的幾何沒有被正確渲染、畫面看起來仍然很「正常」的情況。穿模這類細微的錯，在這裡就已經是最難的一類，後面 VLM 也會再撞上它。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派三 · 直接問 VLM</div>
+    <h3>不訓練，把截圖丟給模型問「哪裡不對」</h3>
+    <p>這一派的共同問題是：模型在公開資料上的分數，換到開發現場還剩多少？2023 年的 GlitchBench 從 Reddit r/GamePhysics 和 Unity 合成場景整理出 593 張 glitch 和 330 張正常畫面，橫跨 205 款遊戲。當時最強的 GPT-4V 平均只有 43.4%，開源模型更低；最難的是動畫和姿勢類的錯誤。兩年後的 VideoGameQA-Bench 用 1,000 張 Steam 社群截圖，GPT-4o 在圖片 glitch 偵測上做到 82.8%。看起來問題快解決了。</p>
+    <p>但同一個研究團隊和 EA 合作，拿一款第一人稱射擊遊戲的內部開發資料重做這個實驗，結果完全不同：</p>
+    <figure class="figure">
+      <div class="figtitle">同樣的提問方式，在公開截圖上超過八成，在真實開發資料上不到一半</div>
+      <div class="figsub">各資料集上報告的 VLM 準確率（工業資料只測了 GPT-4o）</div>
+      <div class="chart" id="ch-gap"></div>
+      <figcaption>資料：GlitchBench（CVPR 2024，GPT-4V，Q1/Q2 平均）；VideoGameQA-Bench（NeurIPS 2025，GPT-4o）；Lu 等人 arXiv 2508.04895 討論段的小實驗（GPT-4o，使用 VideoGameQA-Bench 的提示，100 張工業 FPS 遊戲截圖，好壞各半，F1 0.52）。前兩者是 GPT-4V 與 GPT-4o，模型不同；三份資料的難度和評分方式也不同，這張圖呈現的是落差的量級，不是同條件比較。</figcaption>
+    </figure>
+    <p>作者的解釋是：公開資料大多是清楚、容易辨認的 glitch，而開發中的 bug 往往很細微。</p>
+    <p>如果不是挑好的截圖，而是整段測試錄影呢？Lu 等人同樣和 EA 合作，把 41 小時的自動化測試錄影抽成近兩萬張關鍵幀交給模型。gpt-4.1-mini 當偵測器的 precision 是 0.50，也就是報出來的有一半是誤報。在它的結果上再加一個模型當裁判、或用檢索補充上下文，改善都有限：用 gpt-5-mini 當裁判最好，也只到 0.57；圖片檢索則讓結果變差。另外，模型抓到的 bug 裡有 46.8% 是畫面上的錯誤訊息文字。論文把這些算成真的 bug，但它們是最顯眼的一類，不是渲染錯誤。</p>
+    <figure class="figure">
+      <div class="figtitle">加裁判或檢索的改善有限：最好的組合也只到 0.57，圖片檢索在三種裁判下都讓 precision 下降</div>
+      <div class="figsub">EA 自動化測試錄影上的 precision，依策略與模型</div>
+      <div class="chart" id="ch-triage"></div>
+      <figcaption>資料：Lu 等人，How Far Can VLMs Go for Visual Bug Detection?，arXiv 2603.22706。第一組是各模型自己當偵測器（4o-mini 未列出）；後三組都以 gpt-4.1-mini 為偵測器，圖例是負責裁判或檢索判斷的模型。這裡只畫 precision；加了裁判的設定，也可能是靠丟掉一部分真的 bug 換來的。</figcaption>
+    </figure>
+    <p>誤報從哪來？Sony 的研究把範圍縮到單一類型：穿模。他們在 Godot 的第三人稱射擊範例場景中讓 agent 自動探索，再改引擎讓它直接標出哪裡穿模，得到精確的標註。六個模型搭配「明顯正常」的畫面樣本時表現不錯，但正常畫面換成隨機抽樣後，準確率掉了 9 到 15 個百分點：</p>
+    <figure class="figure">
+      <div class="figtitle">正常畫面一變得模稜兩可，每個模型的誤報都增加</div>
+      <div class="figsub">穿模偵測準確率：正常畫面樣本為「容易」的 vs 隨機抽樣的；兩組的穿模畫面是同一批 500 張，所以下降完全來自誤報</div>
+      <div class="chart" id="ch-clip"></div>
+      <figcaption>資料：Celemin 等人（Sony Interactive Entertainment），Evaluating VLMs for Autonomous Agent-Driven Geometry Clipping Detection，IEEE CoG 2026，arXiv 2607.25921。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派四 · 給一張參考畫面</div>
+    <h3>不問「哪裡不對」，問「跟這張比哪裡不一樣」</h3>
+    <p>人類 QA 在做回歸測試時，會拿上一版確認過的畫面對照。RefGlitch-Bench 在 Godot 場景中做了 1,000 組參考與測試的配對，比較幾種選參考畫面的方式。對多數模型來說，給參考有幫助，而人工挑的參考最好：</p>
+    <figure class="figure">
+      <div class="figtitle">給參考畫面對多數模型有幫助，但 Gemini 反而變差</div>
+      <div class="figsub">準確率：不給參考 → 自動選「最後一張被判為乾淨」的畫面 → 人工挑選的參考</div>
+      <div class="chart" id="ch-ref"></div>
+      <figcaption>資料：RefGlitch-Bench，arXiv 2604.11082，表 1。</figcaption>
+    </figure>
+    <p>可是 VideoGameQA-Bench 裡同樣是「兩張圖比對」的視覺回歸任務，結果非常差。任務是：給同一個場景的參考畫面和測試畫面，加上一段說明哪些變化可以接受（換裝、天氣、光線），判斷要不要放行。在 Unity 場景的部分，錯誤是某個物件被拿掉；另外 70 組來自 YouTube 上過場動畫的 glitch。</p>
+    <figure class="figure">
+      <div class="figtitle">視覺回歸是 VideoGameQA-Bench 裡最難的任務之一，最好的模型不到一半</div>
+      <div class="figsub">視覺回歸任務準確率（250 組）</div>
+      <div class="chart" id="ch-vr"></div>
+      <figcaption>資料：Taesiri 等人，VideoGameQA-Bench，NeurIPS 2025，表 2。作者觀察到：不管被拿掉的是背景裡的小物件還是鏡頭前的大物件，模型都經常沒發現。推理型模型普遍比對應的非推理型好。論文沒有列出「應該放行」和「不該放行」各佔多少；如果兩者各半，所有模型都低於隨機猜的 50%。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派五 · 用文字找畫面</div>
+    <h3>已經知道 bug 是什麼，找出它出現在影片的哪一格</h3>
+    <p>開發中的 bug 回報常附一段影片，但真正有問題的可能只有其中一格。Lu 等人把一款 FPS 遊戲的 JIRA 回報拿來實驗：先抽出關鍵幀，再讓 GPT-4o 依回報的文字描述挑出最符合的一格。在 247 支影片上，論文定義的 Accuracy@1 是 0.89、F1 是 0.79；換算成影片，有 169 支（68%）的第一個答案是對的。表現好壞跟 bug 類型很有關係：</p>
+    <figure class="figure">
+      <div class="figtitle">光影和物理類最容易找到，動畫與特效類最難</div>
+      <div class="figsub">依描述找出 bug 畫面的 F1，依 bug 類別</div>
+      <div class="chart" id="ch-retr"></div>
+      <figcaption>資料：Lu 等人，Automated Bug Frame Retrieval from Gameplay Videos Using VLMs，arXiv 2508.04895。</figcaption>
+    </figure>
+  </section>
+
+  <h2>現在卡在哪裡</h2>
+  <ol class="problems">
+    <li><strong>公開資料和開發現場是兩個世界。</strong>同樣是 GPT-4o、同樣的提示，公開截圖上 82.8%，在 100 張工業截圖的小實驗裡只有 46%（兩份資料的難度與組成不同）。公開資料偏向清楚、容易辨認的 glitch，而開發中的 bug 通常很細微。</li>
+    <li><strong>監督式方法要為每款遊戲準備訓練資料。</strong>GLIB 的論文寫明，訓練階段需要遊戲原始碼來產生 glitch；只用真實 bug 截圖訓練時，recall 只有 0.563。</li>
+    <li><strong>評估設計可能高估了泛化能力。</strong>GLIB 公開的測試集中，192 張 glitch 圖來自 18 款沒參與訓練的遊戲，但 240 張正常圖全部來自參與訓練的那兩款（論文寫的是 365 張正常圖，沒有說明來源）。「沒見過的遊戲的正常畫面會不會被誤判」，這份測試集沒有量到。</li>
+    <li><strong>模稜兩可的正常畫面帶來大量誤報。</strong>穿模偵測的正常畫面換成隨機抽樣，準確率掉 9 到 15 個百分點；換成靠牆、部分遮蔽這類最模稜兩可的畫面，掉 19 到 25 個百分點。EA 錄影上的 precision 停在 0.50 左右。</li>
+    <li><strong>參考畫面本身可能就是壞的。</strong>RefGlitch 的實驗中，自動選出的參考有 33.4% 本身就有 glitch，讓正常畫面的誤報率從 0.58 升到 0.84；而即使參考是乾淨的，0.58 的誤報率也已經很高。不相關的參考則讓小模型的 F1 掉到 0.2 以下。</li>
+    <li><strong>回歸比對仍然很弱。</strong>在需要容忍「允許的變化」的視覺回歸任務上，最好的模型 45.2%，連明顯被拿掉的物件都常常沒發現。</li>
+    <li><strong>動畫類一直是最難的。</strong>GlitchBench 裡動畫與姿勢類最難；依描述找畫面時，動畫與特效類的 F1 只有 0.51，遠低於光影的 0.94。</li>
+    <li><strong>抓得到的偏向最顯眼的那一類。</strong>EA 錄影的實驗中，模型抓到的 bug 有近一半是畫面上的錯誤訊息文字；細微的渲染錯誤佔的比例相對少。</li>
+  </ol>
+
+  <p>這一頁的方法都有一個前提：問題在一張畫面裡就看得到。下一頁的 bug 不是這樣，把影片停在任何一格，畫面都完全正常。</p>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>B. Wilkins, K. Stathis. Learning to Identify Perceptual Bugs in 3D Video Games. <a href="https://arxiv.org/abs/2202.12884">arXiv 2202.12884</a></li>
+    <li>C. García Ling, K. Tollmar, L. Gisslén. Using Deep Convolutional Neural Networks to Detect Rendered Glitches in Video Games. AIIDE 2020. <a href="https://arxiv.org/abs/2406.08231">arXiv 2406.08231</a></li>
+    <li>K. Chen 等人. GLIB. FSE 2021. <a href="https://arxiv.org/abs/2106.10507">arXiv 2106.10507</a> · <a href="https://zenodo.org/records/5081242">資料</a></li>
+    <li>M. R. Taesiri 等人. GlitchBench: Can Large Multimodal Models Detect Video Game Glitches? CVPR 2024. <a href="https://arxiv.org/abs/2312.05291">arXiv 2312.05291</a></li>
+    <li>M. R. Taesiri 等人. VideoGameQA-Bench. NeurIPS 2025 Datasets &amp; Benchmarks. <a href="https://arxiv.org/abs/2505.15952">arXiv 2505.15952</a></li>
+    <li>W. Lu 等人. Automated Bug Frame Retrieval from Gameplay Videos Using Vision-Language Models. <a href="https://arxiv.org/abs/2508.04895">arXiv 2508.04895</a></li>
+    <li>W. Lu 等人. How Far Can VLMs Go for Visual Bug Detection? Studying 19,738 Keyframes from 41 Hours of Gameplay Videos. <a href="https://arxiv.org/abs/2603.22706">arXiv 2603.22706</a></li>
+    <li>C. Celemin 等人. Evaluating VLMs for Autonomous Agent-Driven Geometry Clipping Detection in Video Game QA. IEEE CoG 2026. <a href="https://arxiv.org/abs/2607.25921">arXiv 2607.25921</a></li>
+    <li>RefGlitch-Bench: A Benchmark for Reference-based Gameplay Glitch Detection with Vision-Language Models. <a href="https://arxiv.org/abs/2604.11082">arXiv 2604.11082</a></li>
+  </ol>
+
+  <div class="pagenav"><a href="crash.html">← 當機</a><a href="temporal.html">下一頁：時間性 →</a></div>
+</main>
+
+<script>
+Charts.hbar('#ch-glib', {
+  title: 'GLIB 不同訓練資料的 recall', max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 3, labelWidth: 230,
+  rows: [
+    { label: '只用真實 bug 截圖', value: 0.563 },
+    { label: '規則生成（改編自 OwlEye）', value: 0.677 },
+    { label: '規則生成（固定四種顏色）', value: 0.594 },
+    { label: '程式碼生成 + 規則', value: 0.984 },
+    { label: 'GLIB：程式碼生成', value: 0.99, hl: true, text: '0.990' }
+  ]
+});
+Charts.hbar('#ch-gap', {
+  title: '公開資料與工業資料上的 glitch 偵測準確率', max: 100, unit: '%', ticks: [0, 50, 100], decimals: 1, labelWidth: 250,
+  rows: [
+    { label: 'GlitchBench 2023（GPT-4V）', value: 43.4, color: 'var(--grey)' },
+    { label: 'VideoGameQA-Bench 2025（GPT-4o）', value: 82.8, color: 'var(--c2)' },
+    { label: '工業 FPS 開發資料（GPT-4o）', value: 46, hl: true, text: '46%' }
+  ]
+});
+Charts.grouped('#ch-triage', {
+  title: 'EA 錄影上不同策略的 precision',
+  groups: ['各自當偵測器', '+ 裁判', '+ 圖片檢索', '+ 文字檢索'],
+  series: [
+    { name: 'gpt-4.1-mini', color: 'var(--accent)', values: [0.50, 0.47, 0.37, 0.47] },
+    { name: 'gpt-4o-mini', color: 'var(--c2)', values: [null, 0.48, 0.35, 0.47] },
+    { name: 'gpt-5-mini', color: 'var(--c3)', values: [0.35, 0.55, 0.46, 0.57] }
+  ],
+  max: 0.6, ticks: [0, 0.3, 0.6], tickDecimals: 1, decimals: 2, showValues: true
+});
+Charts.hbar('#ch-ae', {
+  title: '自編碼器在十種畫面 bug 上的 PR-AUC', max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 3, labelWidth: 170, rowHeight: 24,
+  rows: [
+    { label: '黑畫面', value: 0.990 },
+    { label: '貼圖遺失', value: 0.973 },
+    { label: '地圖邊界破洞', value: 0.939 },
+    { label: '幾何損壞', value: 0.934 },
+    { label: '鏡頭穿進物體', value: 0.748 },
+    { label: '畫面撕裂', value: 0.676 },
+    { label: '深度衝突（Z-fighting）', value: 0.600 },
+    { label: '貼圖損壞', value: 0.471 },
+    { label: '深度裁切（Z-clipping）', value: 0.319, hl: true },
+    { label: '物體穿模', value: 0.156, hl: true }
+  ]
+});
+Charts.slope('#ch-clip', {
+  title: '穿模偵測：容易對照組 vs 隨機對照組',
+  x: ['容易的正常畫面', '隨機抽樣的正常畫面'], min: 55, max: 90, ticks: [60, 70, 80, 90], unit: '%', decimals: 1,
+  series: [
+    { name: 'Gemini-3.1 Flash-Lite', values: [85.0, 71.6], hl: true },
+    { name: 'Llama-4 Scout', values: [80.8, 67.4] },
+    { name: 'GPT-5.5', values: [80.4, 65.6] },
+    { name: 'Ministral-3', values: [77.0, 67.7] },
+    { name: 'Gemma-4', values: [76.2, 61.0] },
+    { name: 'Qwen3-VL', values: [76.0, 60.7] }
+  ]
+});
+Charts.slope('#ch-ref', {
+  title: 'RefGlitch：參考畫面對準確率的影響',
+  x: ['不給參考', '自動選的參考', '人工挑選的參考'], min: 0.55, max: 0.8, ticks: [0.6, 0.7, 0.8], tickDecimals: 1, decimals: 2,
+  series: [
+    { name: 'GPT-5', values: [0.65, 0.70, 0.77], hl: true },
+    { name: 'Qwen3-VL-8B', values: [0.62, 0.70, 0.73], color: 'var(--c2)' },
+    { name: 'Ministral-3-8B', values: [0.57, 0.63, 0.68] },
+    { name: 'Gemma-3-12B', values: [0.58, 0.61, 0.63] },
+    { name: 'Gemini 3 Flash', values: [0.67, 0.59, 0.63], color: 'var(--c3)' }
+  ]
+});
+Charts.hbar('#ch-vr', {
+  title: 'VideoGameQA-Bench 視覺回歸準確率', max: 50, unit: '%', ticks: [0, 25, 50], decimals: 1, labelWidth: 200, rowHeight: 24,
+  rows: [
+    { label: 'o4-mini', value: 45.2, hl: true },
+    { label: 'o3', value: 39.6 },
+    { label: 'GPT-4o', value: 31.6 },
+    { label: 'Gemini-2.5-Pro', value: 30.8 },
+    { label: 'GPT-4.1', value: 28.8 },
+    { label: 'Gemini-2.5-Flash', value: 26.4 },
+    { label: 'Mistral-Small-3.1', value: 25.6 },
+    { label: 'Claude 3.7 Sonnet', value: 24.0 },
+    { label: 'Qwen-2.5-VL 72B', value: 21.2 },
+    { label: 'GPT-4.1-mini', value: 20.4 },
+    { label: 'GPT-4.1-nano', value: 19.2 },
+    { label: 'Llama-4 Maverick', value: 18.4 },
+    { label: 'Claude 3.5 Sonnet', value: 14.0 },
+    { label: 'Llama-4 Scout', value: 13.6 },
+    { label: 'Gemma-3 27B', value: 12.8 },
+    { label: 'Gemini-2.0-Flash', value: 12.0 }
+  ]
+});
+Charts.hbar('#ch-retr', {
+  title: '依描述找 bug 畫面的 F1，依類別', max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 2, labelWidth: 200,
+  rows: [
+    { label: '光影', value: 0.94 },
+    { label: '物理與碰撞', value: 0.86 },
+    { label: 'UI 與 HUD', value: 0.83 },
+    { label: '全部', value: 0.79, color: 'var(--c2)' },
+    { label: '動畫與特效', value: 0.51, hl: true }
+  ]
+});
+</script>
+</body>
+</html>

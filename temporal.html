@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>時間性 Glitch · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html" aria-current="page">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">主題 3 / 5</div>
+  <h1>時間性 Glitch</h1>
+  <p class="lede">把影片暫停在任何一格，畫面看起來都很正常。只有連續看下去，才會發現角色在地上滑行、腳卻沒有動。這正是 Lewis 分類最上層切出的「跟時間有關」那一半，也是目前模型最接近「用猜的」一類。</p>
+
+  <div class="scene">
+    <span class="tag">示意情境</span>
+    <p>主角往前跑，位置一直在前進，但走路動畫停在同一個姿勢。截下任何一張圖，都只是「一個站著的角色」。另一支影片裡，有個物件每隔幾格就消失一下又出現；同樣地，單看任何一張都挑不出毛病。</p>
+  </div>
+
+  <h2>問題怎麼定義</h2>
+  <p>Lewis 等人把「跟時間有關」定義為：要看事件的先後或持續才能判斷的錯誤，例如事件該發生卻沒發生、順序不對、進行中的動作被莫名中斷。Truelove 沿用的類別裡，Event Occurrence 和 Interrupted Event 就屬於這一類。</p>
+  <p>不過，現有研究幾乎沒有直接處理「事件沒發生」這種語意層的問題，處理的是更底層、看動作就能發現的時間性錯誤。TempGlitch 把它整理成五種：<strong>閃爍</strong>（物件忽隱忽現）、<strong>射擊時序錯誤</strong>、<strong>速度異常</strong>、<strong>動畫凍結</strong>（姿勢不動但角色在移動）、<strong>卡在原地</strong>（有移動輸入或跑步動畫，位置卻不動）。其中的閃爍，跟 Truelove 的 Object Persistence（物件沒有正確進出遊戲世界）有部分重疊。另一種常見的時間性問題是<strong>畫面停格</strong>（掉幀），嚴格說屬於效能問題，但偵測方式跟上面相同，同樣要看連續畫面，所以也放在這一頁。</p>
+  <p>值得先記住一個背景：在 Truelove 的 Steam 資料裡，語意層的 Interrupted Event 是最少見的三類之一，Event Occurrence 和 Interrupted Event 都沒有任何復發紀錄。上面那五種動作層的 glitch 在 Truelove 的分類裡沒有獨立的類別，所以它們在真實遊戲裡有多常見，目前沒有直接的數字。</p>
+
+  <h2>現在的做法</h2>
+
+  <section class="school">
+    <div class="label">流派一 · 把影片交給 VLM</div>
+    <h3>抽幾格畫面，問模型「這段有沒有 glitch」</h3>
+    <p>這一派的起點是一個問題：要看前後變化的 glitch，對模型來說是不是真的比較難？TempGlitch 的作者先用 GPT-5 在 PhysGame 的真實遊戲影片上做了一個小實驗，比較「單張畫面就看得出」和「要看前後變化」兩種 glitch：</p>
+    <figure class="figure">
+      <div class="figtitle">三種取樣方式下，要看前後變化的 glitch 都比較少被抓到</div>
+      <div class="figsub">GPT-5 在 PhysGame 子集上的 recall，依取樣方式。兩類各只有 50 支影片，每秒 1 張時的差距（0.74 對 0.68）只相當於 3 支影片</div>
+      <div class="chart" id="ch-st"></div>
+      <figcaption>資料：TempGlitch 論文的前導研究。I-frame 是影片壓縮時的關鍵幀。</figcaption>
+    </figure>
+    <p>確認這一點之後，他們建立了 TempGlitch（Alberta 大學與 Sony，2026）：在 Godot 的兩個官方範例裡改程式碼注入其中四種 glitch（射擊時序錯誤是範例專案原本就有的 bug），錄了 750 支有 glitch 的影片；每一類再配 150 支刻意做得很像的正常影片（例如撞牆停下來，看起來也像卡住）。一半有、一半沒有，隨便猜就是 50%。</p>
+    <p>12 個模型的成績都擠在 50% 附近。更麻煩的是，多給畫面也沒用：</p>
+    <figure class="figure">
+      <div class="figtitle">從每秒 1 張提高到每秒 5 張，準確率幾乎沒變，全部貼著 50%</div>
+      <div class="figsub">TempGlitch 準確率，依取樣頻率</div>
+      <div class="chart" id="ch-fps"></div>
+      <figcaption>資料：Yu 等人，TempGlitch，arXiv 2605.21443，表 3。Gemini 兩個模型直接讀原始影片（3.1 Pro 49.7%、3 Flash 50.3%），未畫入。</figcaption>
+    </figure>
+    <p>準確率看不出的事，precision 和 recall 看得出來。模型大致分成三種：一群很保守，幾乎不報（recall 不到 10%）；一群像在擲硬幣，報一半、對一半；只有 Gemini 3 Flash 幾乎什麼都報。沒有任何一個模型能同時報得多又報得準。</p>
+    <figure class="figure">
+      <div class="figtitle">不是太保守，就是在擲硬幣：precision 幾乎都落在 50% 到 68%</div>
+      <div class="figsub">TempGlitch 上每個模型的 recall 與 precision（5 FPS；Gemini 為原始影片）</div>
+      <div class="chart" id="ch-pr"></div>
+      <figcaption>資料：TempGlitch 表 3。藍色是保守型、灰色是擲硬幣型、洋紅色是 Gemini（讀原始影片）。Gemma4 4B 一個都沒報，precision 無法定義，未畫入；Qwen3VL 8B 只報了極少數，所以 precision 是 100%。虛線為 precision 50%，等於隨機。</figcaption>
+    </figure>
+    <p>這個問題不只出現在遊戲。通用影片模型的研究也看到同樣的現象：TimeBlind 讓成對的影片有相同的靜態內容（同樣的場景和物件），只差時間結構，並要求兩支都答對；目前最強的模型只有 48.2%，人類是 98.2%；MotionBlind 測速度、幅度和方向，發現多給畫面或挑更好的畫面都補不上差距。</p>
+  </section>
+
+  <section class="school">
+    <div class="label">流派二 · 只看正常影片，學什麼叫「正常」</div>
+    <h3>不需要標註，偏離正常就算可疑</h3>
+    <p>另一條路完全不用 VLM，而是借用影片異常偵測的做法。較早的嘗試是 Azizi 與 Zaman（CoG 2023）：用 LSTM 讀連續畫面，把「跟前面幾格接不起來」的畫面當成異常，再把抓到的畫面分群歸類；他們在兩款 FPS 遊戲上測試，但論文只說方法有效，沒有給出量化結果。近年的做法同樣是只拿正常的遊戲影片訓練，測試時看新影片離「正常」有多遠。Huynh 與 Pham 在 TempGlitch 上比較了兩種「多遠」的算法：</p>
+    <ul>
+      <li><strong>外觀距離</strong>：用預訓練的影片模型（VideoMAE、V-JEPA 2）把片段轉成特徵，看它跟最接近的正常片段差多少。</li>
+      <li><strong>可預測性</strong>：訓練一個模型預測下一段會長什麼樣，預測得越不準，越可疑。這類會預測下一段畫面的模型叫 world model。作者的 LeWM 和 V-JEPA 2 都屬於 JEPA 類：不預測像素，而是預測畫面的抽象特徵。V-JEPA 2 的特徵兩種算法都能用。</li>
+    </ul>
+    <p>整體成績最好的是 VideoMAE 的外觀距離，AUROC 0.69（0.5 等於亂猜）。AUROC 看的是排序，VLM 的成績是準確率，兩者不能放在同一把尺上比；但至少它明顯離開了隨機水準，只是離實用還很遠。這份研究還是預印本，作者保留的測試集結果也還沒公布。拆成五種 glitch 來看，兩種算法各有盲點：</p>
+    <figure class="figure">
+      <div class="figtitle">沒有任何一種算法在五類上都好；預測式的方法在「動畫凍結」上低於隨機</div>
+      <div class="figsub">TempGlitch 各類 glitch 的 AUROC（0.5 為隨機）</div>
+      <div class="chart" id="ch-cat"></div>
+      <figcaption>資料：Huynh &amp; Pham，When Do Latent World Models Detect Game Glitches?（Zenodo 預印本，2026），表 4 與表 6。V-JEPA 2 的數值為三個 seed 的範圍，取中間值。LeWM 為作者從頭訓練的 world model。</figcaption>
+    </figure>
+    <p>動畫凍結為什麼會讓預測式方法失效？因為凍結的畫面是最容易預測的：下一格跟這一格一模一樣，預測誤差反而變小，看起來比正常還正常。</p>
+    <p>作者自己訓練的 world model（LeWM）成績最差。一個常見的解釋是它的特徵「塌縮」了，全部擠在幾乎同一個方向，分辨不出細微差異；有效秩就是衡量特徵分散程度的指標。作者用六種訓練設定把有效秩從 1.13 拉到 21.30，偵測成績卻幾乎沒有跟著動：</p>
+    <figure class="figure">
+      <div class="figtitle">特徵的有效秩提高近 20 倍，偵測能力沒有跟上</div>
+      <div class="figsub">六種訓練設定的有效秩與 AUROC</div>
+      <div class="chart" id="ch-rank"></div>
+      <figcaption>資料：Huynh &amp; Pham，表 7。虛線是 VideoMAE 外觀距離的 AUROC 0.69，六種設定都低於它。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派三 · 讓模型分步驟推理，再找出時間點</div>
+    <h3>不只回答有沒有，還要說出發生在第幾秒</h3>
+    <p>更早的 GELID（EMSE 2023）走的是實況影片：先用實況主的字幕切出他提到問題的片段，再自動分類、依遊戲場景和問題類型分群。在三款遊戲、604 個片段上，切片段和依問題分群做得不錯，但「這段是哪一類問題」的分類效果有限。</p>
+    <p>VideoGlitchBench 從 GamePhysics 的 Reddit 影片中整理出 120 款遊戲、5,238 支影片，每支都標了 glitch 的文字描述和起訖時間。模型要回答「發生了什麼、在什麼時候」，用文字相似度和時間區間重疊度評分。直接問的成績很低；作者提出的 GliDe 流程讓模型分階段掃描、推理、定位，對每個開源模型都有明顯提升：</p>
+    <figure class="figure">
+      <div class="figtitle">分步驟推理讓每個開源模型的 F1 都提升 19 到 27 個百分點，但最好的也只到 40%</div>
+      <div class="figsub">VideoGlitchBench F1：直接問 vs 加上 GliDe 流程</div>
+      <div class="chart" id="ch-glide"></div>
+      <figcaption>資料：VideoGlitchBench，arXiv 2604.07818，表 3。閉源模型只有直接問的結果，最好的是 claude-3.5-haiku 26.0%。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派四 · 比較相鄰畫面</div>
+    <h3>連續幾格幾乎一樣，就是畫面停格了</h3>
+    <p>畫面停格有一個很直接的特徵：畫面該動的時候沒有動。HASTE（ICSE 2025）分析 Twitch 和 YouTube 的實況影片，先切出真正在玩遊戲的片段、去掉頻道 logo 和聊天室這些疊加物，再看相鄰畫面是否幾乎相同。在 105 支影片上，precision 89%、recall 71%。它不用任何大型模型，只靠影像相似度。</p>
+  </section>
+
+  <h2>現在卡在哪裡</h2>
+  <ol class="problems">
+    <li><strong>VLM 接近隨機，而且加資源也沒用。</strong>12 個模型都在 49% 到 54% 之間；提高取樣頻率、改讀原始影片、換更大的模型，都沒有穩定的改善。</li>
+    <li><strong>這是影片模型共通的「時間盲」。</strong>通用影片研究也看到同樣的現象：成對影片靜態內容相同、只差時間結構時，目前最強的模型只有 48.2%，人類 98.2%。</li>
+    <li><strong>每種算法都有結構性的盲點。</strong>預測式方法看不到凍結；外觀距離方法每一類都只在 0.64 到 0.75 之間，沒有一類特別好。五類 glitch 沒有一種算法全部顧到。</li>
+    <li><strong>最好的方法也離實用很遠。</strong>最佳 AUROC 約 0.69；作者用正常影片設定警報門檻（讓約 5% 的正常影片會被誤報）時，論文第一部分比較的偵測器沒有一個能抓到超過兩成的 glitch。開放式描述加定位，最好的 F1 也只有約 40%。</li>
+    <li><strong>公開資料是注入的，而且很窄。</strong>TempGlitch 只有一個引擎、兩個範例場景，五類中有四類由作者直接修改遊戲狀態產生；類別的選擇沒有說明在真實遊戲中的頻率。</li>
+    <li><strong>標籤只到「這支影片有沒有」。</strong>TempGlitch 沒有逐格標註，也沒有玩家輸入紀錄，無法分析模型錯在哪一格。</li>
+    <li><strong>真實世界的重要性證據不足。</strong>Steam 更新說明的統計涵蓋的是「事件沒發生、被中斷」這類語意層的類別：Interrupted Event 是最少見的類別之一，它和 Event Occurrence 都從未復發。這一頁研究的動作層 glitch 則沒有對應的頻率資料。兩者都可能只是比較少被寫進更新說明。</li>
+  </ol>
+
+  <p>這一頁的研究大多只看影片，不知道玩家按了什麼。下一頁會看到，有一類 bug 正是卡在這裡：不知道輸入，原理上就判斷不了。</p>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>E. Azizi, L. Zaman. Automatic Bug Detection in Games using LSTM Networks. IEEE CoG 2023. <a href="https://arxiv.org/abs/2312.08418">arXiv 2312.08418</a></li>
+    <li>E. Guglielmi 等人. Using Gameplay Videos for Detecting Issues in Video Games（GELID）. EMSE 2023. <a href="https://arxiv.org/abs/2307.14749">arXiv 2307.14749</a></li>
+    <li>C. Lewis 等人. What went wrong: a taxonomy of video game bugs. FDG 2010.</li>
+    <li>Y. Yu 等人. TempGlitch: Evaluating Vision-Language Models for Temporal Glitch Detection in Gameplay Videos. <a href="https://arxiv.org/abs/2605.21443">arXiv 2605.21443</a> · <a href="https://asgaardlab.github.io/TempGlitch/">專案頁</a></li>
+    <li>D. T. Huynh, N. N. Pham. When Do Latent World Models Detect Game Glitches? <a href="https://doi.org/10.5281/zenodo.23449952">Zenodo</a></li>
+    <li>Open-Ended Video Game Glitch Detection with Agentic Reasoning and Temporal Grounding（VideoGlitchBench）. ACM MM 2026. <a href="https://arxiv.org/abs/2604.07818">arXiv 2604.07818</a></li>
+    <li>PhysGame: Uncovering Physical Commonsense Violations in Gameplay Videos. <a href="https://arxiv.org/abs/2412.01800">arXiv 2412.01800</a></li>
+    <li>TimeBlind: A Spatio-Temporal Compositionality Benchmark for Video LLMs. <a href="https://arxiv.org/abs/2602.00288">arXiv 2602.00288</a></li>
+    <li>MotionBlind: Probing the Illusion of Motion Understanding in Video-LLMs. <a href="https://arxiv.org/abs/2609.09528">arXiv 2609.09528</a></li>
+    <li>E. Guglielmi 等人. Automatic Identification of Game Stuttering via Gameplay Videos Analysis（HASTE）. ICSE 2025. <a href="https://conf.researchr.org/details/icse-2025/icse-2025-journal-first-papers/8/Automatic-Identification-of-Game-Stuttering-via-Gameplay-Videos-Analysis">連結</a></li>
+  </ol>
+
+  <div class="pagenav"><a href="graphics.html">← 畫面渲染</a><a href="interaction.html">下一頁：動作與互動 →</a></div>
+</main>
+
+<script>
+Charts.slope('#ch-fps', {
+  title: 'TempGlitch：取樣頻率與準確率',
+  x: ['每秒 1 張', '每秒 5 張'], min: 40, max: 60, ticks: [40, 45, 50, 55, 60], unit: '%', decimals: 1,
+  ref: 50, refLabel: '隨機猜 50%', height: 380,
+  series: [
+    { name: 'GPT 5.4 Mini', values: [52.4, 54.1], hl: true },
+    { name: 'Gemma4 31B', values: [52.3, 53.0] },
+    { name: 'Ministral3 3B', values: [50.2, 53.0] },
+    { name: 'Ministral3 14B', values: [51.9, 52.6] },
+    { name: 'Claude Haiku', values: [49.7, 51.3] },
+    { name: 'GPT 5.5', values: [50.5, 51.1] },
+    { name: 'Claude Opus', values: [51.0, 50.2] },
+    { name: 'Qwen3.6 27B', values: [50.5, 50.5] },
+    { name: 'Qwen3VL 8B', values: [50.7, 50.1] },
+    { name: 'Gemma4 4B', values: [50.0, 50.0] }
+  ]
+});
+Charts.scatter('#ch-pr', {
+  title: 'TempGlitch：recall 與 precision',
+  xmin: 0, xmax: 100, ymin: 40, ymax: 100, xticks: [0, 25, 50, 75, 100], yticks: [40, 50, 60, 70, 80, 90, 100], xunit: '%', yunit: '%',
+  xLabel: 'Recall（抓到多少比例的 glitch）', yLabel: 'Precision', height: 380,
+  refs: [{ y: 50, label: '隨機' }],
+  points: [
+    { x: 0.3, y: 100, label: 'Qwen3VL 8B', color: 'var(--c2)' },
+    { x: 4.3, y: 68.1, label: 'GPT 5.5', color: 'var(--c2)', dy: -6 },
+    { x: 5.2, y: 67.2, label: 'Claude Haiku', color: 'var(--c2)', dy: 12 },
+    { x: 9.9, y: 67.9, label: 'Ministral3 14B', color: 'var(--c2)', dx: 8, dy: -10 },
+    { x: 16.7, y: 50.6, label: 'Claude Opus', color: 'var(--grey)', dy: 14 },
+    { x: 23.1, y: 60.7, label: 'GPT 5.4 Mini', color: 'var(--grey)' },
+    { x: 43.5, y: 53.7, label: 'Gemma4 31B', color: 'var(--grey)', dy: -8 },
+    { x: 54.5, y: 50.4, label: 'Qwen3.6 27B', color: 'var(--grey)', dy: 18, anchor: 'end', dx: -4 },
+    { x: 56.9, y: 52.8, label: 'Ministral3 3B', color: 'var(--grey)', dy: -8 },
+    { x: 57.6, y: 49.8, label: 'Gemini 3.1 Pro', color: 'var(--accent)', dy: 18, dx: 6 },
+    { x: 87.2, y: 50.2, label: 'Gemini 3 Flash', color: 'var(--accent)', anchor: 'end', dx: -8, dy: -8 }
+  ]
+});
+Charts.grouped('#ch-st', {
+  title: 'GPT-5：單張可見 vs 要看前後變化的 glitch',
+  groups: ['I-frame', '每秒 1 張', '每秒 2 張'],
+  series: [
+    { name: '單張畫面就看得出', color: 'var(--c2)', values: [0.72, 0.74, 0.80] },
+    { name: '要看前後變化', color: 'var(--accent)', values: [0.48, 0.68, 0.68] }
+  ],
+  max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 2, showValues: true, height: 300
+});
+Charts.grouped('#ch-cat', {
+  title: 'TempGlitch 各類 glitch 的 AUROC',
+  groups: ['閃爍', '動畫凍結', '射擊時序', '卡在原地', '速度異常'],
+  series: [
+    { name: 'VideoMAE 外觀距離', color: 'var(--c2)', values: [0.747, 0.730, 0.638, 0.748, 0.730] },
+    { name: 'V-JEPA 2 特徵＋預測', color: 'var(--accent)', values: [0.725, 0.396, 0.736, 0.885, 0.795] },
+    { name: 'LeWM 預測', color: 'var(--grey)', values: [0.520, 0.485, 0.851, 0.468, 0.721] }
+  ],
+  min: 0, max: 1, ticks: [0, 0.5, 1], tickDecimals: 1, decimals: 2, ref: 0.5, refLabel: '隨機 0.5'
+});
+Charts.scatter('#ch-rank', {
+  title: '有效秩與 AUROC',
+  xmin: 0, xmax: 24, ymin: 0.55, ymax: 0.72, xticks: [0, 5, 10, 15, 20], yticks: [0.55, 0.6, 0.65, 0.7], ydec: 2,
+  xLabel: '有效秩（越高代表特徵越分散、越不塌縮）', yLabel: 'AUROC',
+  refs: [{ y: 0.6895, label: 'VideoMAE 外觀距離 0.69' }],
+  points: [
+    { x: 1.13, y: 0.5837, label: '原始設定', color: 'var(--grey)' },
+    { x: 2.57, y: 0.6031, label: '', color: 'var(--grey)' },
+    { x: 4.54, y: 0.5697, label: '', color: 'var(--grey)' },
+    { x: 5.48, y: 0.6096, label: '', color: 'var(--grey)' },
+    { x: 5.18, y: 0.6264, label: '最佳 0.626', color: 'var(--accent)', dy: -8 },
+    { x: 21.30, y: 0.5954, label: '秩最高 21.3', color: 'var(--c2)', anchor: 'end', dx: -8 }
+  ]
+});
+Charts.slope('#ch-glide', {
+  title: 'VideoGlitchBench：直接問 vs GliDe',
+  x: ['直接問', '加上 GliDe'], min: 0, max: 45, ticks: [0, 15, 30, 45], unit: '%', decimals: 1,
+  series: [
+    { name: 'UI-TARS-1.5-7B', values: [21.62, 40.45], hl: true },
+    { name: 'Qwen2.5-VL-7B', values: [12.20, 39.12] },
+    { name: 'InternVL2.5-8B', values: [15.77, 36.33] },
+    { name: 'Qwen2.5-VL-3B', values: [15.63, 35.52] },
+    { name: 'InternVL2.5-4B', values: [12.53, 32.56] },
+    { name: 'LLaVA-OneVision-7B', values: [9.06, 32.32] }
+  ]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>資訊與介面 · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html" aria-current="page">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">主題 5 / 5</div>
+  <h1>資訊與介面</h1>
+  <p class="lede">資源計數器過了一天還是舊的數字、德文翻譯太長把按鈕撐破、字幕跟角色說的話對不上。這是 Steam 更新說明裡最常被修的一類，也是最容易被當成「小問題」排到最後才處理的一類。</p>
+
+  <div class="scene">
+    <span class="tag">開源遊戲裡的真實回報</span>
+    <p><a href="https://github.com/ihhub/fheroes2/issues/7002">fheroes2 #7002</a>：冒險地圖上，新的一天開始時資源計數器沒有更新。<a href="https://github.com/LostArtefacts/TRX/issues/2659">TRX #2659</a>：旅行距離超過 1000 公尺時顯示錯誤。<a href="https://github.com/vcmi/vcmi/issues/3412">vcmi #3412</a>：完成第一個關卡後，戰役說明消失。這三個畫面都沒有「壞掉」，只是上面寫的東西不對。</p>
+  </div>
+
+  <h2>問題怎麼定義</h2>
+  <p>Truelove 的分類裡有兩個相關類別。<strong>Information</strong> 是「遊戲世界的資訊沒有正確傳達給玩家」，也是 12,122 筆修正裡出現最多的類別；<strong>User Interface</strong> 是「介面元素的外觀、位置或行為不正確」。</p>
+  <p>實際上這個主題包含兩種很不一樣的錯：</p>
+  <ul>
+    <li><strong>呈現壞了</strong>：文字重疊、溢出邊框、被截斷。只看畫面就看得出來。</li>
+    <li><strong>內容錯了</strong>：數值沒更新、說明寫錯、名字前後拼法不同、字幕跟角色說的話對不上。畫面完全正常，要知道正確答案才看得出來。</li>
+  </ul>
+  <p>Truelove 的問卷裡，開發者對第二種的解釋是：正確的資訊可能是一連串複雜計算的結果，或是「埋在資料檔裡」，測試的人不一定找得到；而資訊相關的元件常常被排到開發流程的最後，截止日一到就做不好。</p>
+
+  <h2>現在的做法</h2>
+
+  <section class="school">
+    <div class="label">流派一 · 在截圖上找版面異常</div>
+    <h3>把「文字被畫壞」當成影像辨識問題</h3>
+    <p>這條路線先在行動 app 上成形。OwlEye（ASE 2020）用 CNN 判斷截圖有沒有文字重疊、模糊、缺字這類顯示問題，precision 和 recall 都在 85% 左右，還在熱門 app 上找到了開發者沒發現的問題。後續的 Nighthawk 改用自動產生的訓練資料，在 Google Play 與 F-Droid 的 app 上找到 151 個新問題，其中 75 個被確認或修正。</p>
+    <p>但遊戲的介面跟 app 不一樣。網易 GLIB 的論文指出，遊戲裡有些文字以美術字或圖片呈現，文字辨識（OCR）抓不到；而在網易 201 張畫面 glitch 截圖裡，文字類只佔 2%，GLIB 的作者也沒有為文字類生成訓練資料，並承認這是它漏掉文字問題的原因。ByteDance 的 AG3（FSE 2023 業界論文）專門處理多語系遊戲最常見的兩種文字錯誤：<strong>文字重疊</strong>和<strong>文字溢出框外</strong>，並拿 GLIB 在同一批真實截圖上比較：</p>
+    <figure class="figure">
+      <div class="figtitle">為畫面 glitch 設計的偵測器，幾乎抓不到文字錯誤；專門的模型才行</div>
+      <div class="figsub">ByteDance 多語系遊戲的真實截圖上，GLIB 與 AG3 的 precision 與 recall</div>
+      <div class="chart" id="ch-ag3"></div>
+      <figcaption>資料：Liang 等人，AG3，FSE 2023 Industry，表 3、表 4。評估資料是 QA 團隊提供的歷史問題截圖：文字重疊 55 張、文字溢出 288 張，各搭配 1,658 張正常截圖。GLIB 沒有用這批資料重新訓練，等於在別人的主場比賽。作者報告 AG3 部署兩年間找到超過 2,000 個真實的文字問題。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派二 · 跨媒介比對</div>
+    <h3>拿畫面上的文字，去對照另一個來源</h3>
+    <p>有些內容錯誤，正確答案剛好就在影片裡的另一個地方。字幕就是例子：它應該跟角色說的話一致。字幕也是無障礙設計最基本的功能，對聽障玩家來說，字幕錯了就等於劇情錯了。ECHOTEST 的作者引用的資料顯示，Far Cry: New Dawn 有 97% 的玩家保留了預設開啟的字幕，但遊戲字幕的品質一直不如影視作品穩定。ECHOTEST（Gauk 與 Bezemer）從遊戲影片中分別取出字幕文字和語音轉錄的文字，再比對兩者，抓出錯字、不同步和缺漏。</p>
+    <figure class="figure">
+      <div class="figtitle">在真實遊戲影片上很準；換到刻意做難的合成資料，recall 升到 99%，precision 卻掉到 73%</div>
+      <div class="figsub">ECHOTEST 偵測字幕與語音不一致的 precision 與 recall</div>
+      <div class="chart" id="ch-echo"></div>
+      <figcaption>資料：Gauk &amp; Bezemer，Detecting Discrepancies between Subtitles and Audio in Gameplay Videos with ECHOTEST，IEEE Transactions on Games。真實資料來自 15 款熱門遊戲的遊玩影片。</figcaption>
+    </figure>
+  </section>
+
+  <section class="school">
+    <div class="label">流派三 · 讓 VLM 讀畫面</div>
+    <h3>不訓練，直接問模型介面上寫了什麼、對不對</h3>
+    <p>VideoGameQA-Bench 有一組「UI 單元測試」，用 Steam 社群截圖問介面上的具體內容。最好的模型 Gemini-2.5-Pro 只答對 40%，比一般的視覺單元測試（53%）還低。</p>
+    <p>反過來，如果已經有一段文字描述，讓模型從影片裡找出對應的畫面，UI 與 HUD 類的 bug 表現不錯，F1 達 0.83。而〈畫面渲染〉那一頁提過的 EA 測試錄影實驗中，模型抓到的 bug 有 46.8% 是畫面上的錯誤訊息文字：這類文字很顯眼，是模型最容易抓到的一種。</p>
+  </section>
+
+  <h2>現在卡在哪裡</h2>
+  <ol class="problems">
+    <li><strong>「內容寫錯」的答案不在畫面上。</strong>數值、說明、名稱對不對，畫面本身沒有答案；開發者自己都說正確資訊「埋在資料檔裡」。除了字幕這種「另一個來源剛好就在影片裡」的情況，這份報告沒有找到處理數值、說明、名稱錯誤的自動化研究。</li>
+    <li><strong>通用的畫面偵測器看不到文字問題。</strong>網易的畫面 glitch 截圖裡文字只佔 2%，GLIB 也沒有為它生成訓練資料；在 AG3 的真實截圖上，GLIB 對文字重疊的 recall 只有 7%，對文字溢出不到 1%。</li>
+    <li><strong>遊戲文字不一定是「文字」。</strong>美術字和做成圖片的文字讓 OCR 失效；截圖裡也沒有介面元素的位置資訊，連文字在哪裡都不容易定位。</li>
+    <li><strong>沒測過的設定就會出事。</strong>AG3 的作者指出，即使是測試完善的遊戲，跑在沒測過的解析度或系統版本上，仍可能出現文字錯誤；多語系又讓同一個畫面有多個版本要看。</li>
+    <li><strong>資料和模型多半不公開。</strong>AG3 的評估資料來自公司內部 QA；AG3 的作者也提到 OwlEye 沒有公開模型。遊戲領域目前沒有以文字或介面錯誤為主的公開資料集：VideoGameQA-Bench 的 UI 單元測試只有 100 張，GLIB 的公開測試集裡文字類也很少。</li>
+    <li><strong>大型模型讀介面細節仍然吃力。</strong>UI 單元測試最好 40%；在自動化錄影裡，顯眼的除錯文字又會蓋過真正的介面問題。</li>
+    <li><strong>無障礙檢查換個資料就變難。</strong>ECHOTEST 在真實遊戲上 precision 98%，在刻意做難的合成資料上降到 73%。</li>
+  </ol>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>A. Truelove 等人. We'll Fix It in Post. <a href="https://arxiv.org/abs/2103.03997">arXiv 2103.03997</a></li>
+    <li>Z. Liu 等人. Owl Eyes: Spotting UI Display Issues via Visual Understanding. ASE 2020. <a href="https://arxiv.org/abs/2009.01417">arXiv 2009.01417</a></li>
+    <li>Z. Liu 等人. Nighthawk: Fully Automated Localizing UI Display Issues via Visual Understanding. IEEE TSE. <a href="https://arxiv.org/abs/2205.13945">arXiv 2205.13945</a></li>
+    <li>K. Chen 等人. GLIB. FSE 2021. <a href="https://arxiv.org/abs/2106.10507">arXiv 2106.10507</a></li>
+    <li>X. Liang, J. Qi, Y. Gao, C. Peng, P. Yang. AG3: Automated Game GUI Text Glitch Detection Based on Computer Vision. FSE 2023 Industry. <a href="https://chao-peng.github.io/publication/fse23/fse23.pdf">PDF</a></li>
+    <li>I. Gauk, C.-P. Bezemer. Detecting Discrepancies between Subtitles and Audio in Gameplay Videos with ECHOTEST. IEEE Transactions on Games. <a href="https://asgaard.ece.ualberta.ca/papers/Journal/TG_2024_Gauk_Detecting_Discrepancies_Between_Subtitles_and.pdf">PDF</a></li>
+    <li>M. R. Taesiri 等人. VideoGameQA-Bench. NeurIPS 2025. <a href="https://arxiv.org/abs/2505.15952">arXiv 2505.15952</a></li>
+    <li>W. Lu 等人. Automated Bug Frame Retrieval from Gameplay Videos Using VLMs. <a href="https://arxiv.org/abs/2508.04895">arXiv 2508.04895</a></li>
+    <li>W. Lu 等人. How Far Can VLMs Go for Visual Bug Detection? <a href="https://arxiv.org/abs/2603.22706">arXiv 2603.22706</a></li>
+    <li>開源遊戲回報：<a href="https://github.com/ihhub/fheroes2/issues/7002">fheroes2 #7002</a> · <a href="https://github.com/LostArtefacts/TRX/issues/2659">TRX #2659</a> · <a href="https://github.com/vcmi/vcmi/issues/3412">vcmi #3412</a>（經 OSSGameBench 檢索）</li>
+  </ol>
+
+  <p>五個主題看完，有幾件事在每一頁都出現。總覽頁的最後一節把它們放在一起。</p>
+
+  <div class="pagenav"><a href="interaction.html">← 動作與互動</a><a href="index.html#common">回到總覽：五個主題的共同處境</a></div>
+</main>
+
+<script>
+Charts.grouped('#ch-ag3', {
+  title: 'GLIB 與 AG3 在文字錯誤上的表現',
+  groups: ['文字重疊\nprecision', '文字重疊\nrecall', '文字溢出\nprecision', '文字溢出\nrecall'],
+  series: [
+    { name: 'GLIB（畫面 glitch 偵測器）', color: 'var(--grey)', values: [14.29, 7.27, 4.00, 0.35] },
+    { name: 'AG3（專門的文字錯誤偵測）', color: 'var(--accent)', values: [94.34, 90.91, 81.03, 97.92] }
+  ],
+  max: 100, ticks: [0, 50, 100], unit: '%', decimals: 2, showValues: true, height: 330
+});
+Charts.grouped('#ch-echo', {
+  title: 'ECHOTEST precision 與 recall',
+  groups: ['15 款真實遊戲', '合成的困難資料'],
+  series: [
+    { name: 'Precision', color: 'var(--accent)', values: [98, 73] },
+    { name: 'Recall', color: 'var(--c2)', values: [89, 99] }
+  ],
+  max: 100, ticks: [0, 50, 100], unit: '%', decimals: 0, showValues: true, height: 300
+});
+</script>
+</body>
+</html>

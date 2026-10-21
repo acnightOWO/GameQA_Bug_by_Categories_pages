@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/charts.js"></script>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html" aria-current="page">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+  </ul>
+</nav>
+
+<main class="page">
+  <div class="kicker">Game QA 研究報告 · 2026 年 10 月</div>
+  <h1>遊戲 Bug 地圖</h1>
+  <p class="lede">遊戲出錯的方式有上百種。這份報告先回到「bug 該怎麼分類」的研究，從資料看哪幾類最常見、最痛，再分頁看每一類目前被做到哪裡、卡在哪裡。</p>
+
+  <div class="toc">
+    這一頁：
+    <ol>
+      <li><a href="#taxonomy">怎麼替遊戲 bug 分類</a></li>
+      <li><a href="#frequency">哪些最常見、最嚴重</a></li>
+      <li><a href="#why-hard">為什麼這些 bug 難抓</a></li>
+      <li><a href="#families">五個需要攻克的主題</a></li>
+      <li><a href="#common">五個主題的共同處境</a></li>
+    </ol>
+  </div>
+
+
+  <h2 id="taxonomy">一、怎麼替遊戲 bug 分類</h2>
+
+  <p>2010 年，Lewis、Whitehead 與 Wardrip-Fruin 想回答一個看似簡單的問題：遊戲到底會「怎麼」壞掉？他們沒有去讀程式碼，而是蒐集線上影片、文章和玩家社群裡的 glitch，用<strong>玩家看到的樣子</strong>來分類。這個選擇很關鍵：同一個畫面上的錯，背後的原因可能有十種，但玩家只會感受到一種。</p>
+
+  <p>他們的分類最上層只切一刀：<strong>跟時間有關的</strong>和<strong>跟時間無關的</strong>。前者要看前後變化才知道不對，例如事件該發生卻沒發生、進行中的動作被莫名中斷；後者一張畫面就看得出來，例如物件出現在不該在的位置、畫面渲染錯誤。這套分類一共 11 種類型。</p>
+
+  <p>十一年後，Truelove、de Almeida 與 Ahmed 把這套分類拿去對照真實世界。他們讀了 Steam 上最熱門的 30 款遊戲、723 次更新的更新說明，一行一行標記，總共 <strong>12,122 筆 bug 修正</strong>。Lewis 的 11 類不夠用，他們又補了 9 類（音效、鏡頭、碰撞、當機、使用者介面、物件持續性、事件觸發、物件屬性交互、作弊漏洞），變成 20 類。</p>
+
+  <p>之後還有更大的整理。Butt 等人做了多來源文獻回顧，把分類擴充到 63 類、第一層 8 大類，並用業界從業者問卷驗證；它的期刊版本 VGBT 回顧了 436 份來源，並套用到開源遊戲 0 A.D. 的 594 份 bug 回報上。不過這兩套分類沒有提供大規模的頻率資料，所以這份報告仍以 Truelove 的 20 類為骨架。</p>
+
+  <div class="tablebox">
+  <table>
+    <thead><tr><th>研究</th><th>資料來源</th><th>規模</th><th>分類</th></tr></thead>
+    <tbody>
+      <tr><td>Lewis 等人 2010</td><td>線上影片、文章、玩家社群</td><td>—</td><td>依玩家看到的表現分類；最上層 temporal / non-temporal；11 種</td></tr>
+      <tr><td>Truelove 等人 2021</td><td>Steam 30 款熱門遊戲的更新說明，加 47 份開發者問卷</td><td class="num">12,122 筆修正</td><td>Lewis 的 11 種加 9 種新類，共 20 種</td></tr>
+      <tr><td>Butt 等人 2023</td><td>多來源文獻回顧，從業者問卷驗證</td><td>—</td><td>63 類，第一層 8 大類</td></tr>
+      <tr><td>VGBT 2025</td><td>436 份來源；套用到 0 A.D.</td><td class="num">594 份回報</td><td>63 類</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="frequency">二、哪些最常見、最嚴重</h2>
+
+  <p>分類只告訴我們有哪些種類，要知道哪些最該優先處理，得看實際的修正紀錄。Truelove 的資料給了一個清楚的排名：</p>
+
+  <div class="tablebox">
+  <table>
+    <thead><tr><th>指標</th><th>前三名</th><th>最後三名</th></tr></thead>
+    <tbody>
+      <tr><td>最常出現在更新裡</td><td><strong>Information</strong>（資訊沒有正確傳達給玩家）、<strong>Game Graphics</strong>（畫面渲染錯誤）、<strong>Action</strong>（做不到該做得到的動作，或反過來）</td><td>Camera、Interrupted Event、Exploit</td></tr>
+      <tr><td>最常反覆復發</td><td><strong>Crash</strong>、<strong>Game Graphics</strong>、<strong>Triggered Event</strong>（A 該觸發 B 卻沒觸發）</td><td>Camera、Event Occurrence、Interrupted Event（這三類沒有任何復發紀錄）</td></tr>
+      <tr><td>最嚴重（出現在緊急更新的比例）</td><td><strong>Crash</strong>（38%），其次是 Object Persistence、Triggered Event</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>作者在討論中特別點名：Information bug 雖然最常見，但復發率和嚴重度都不高；當機不是最多的，卻是復發最多、最嚴重的一類，「研究者或許應該把更多力氣放在當機上」。</p>
+
+  <p>Steam 的更新說明是 PC 遊戲的視角。手機遊戲的相容性測試給了另一個視角：測試公司 TestBird 在 2020 年測了 11,476 款手機遊戲，共 552,851 個相容性問題；騰訊 WeTest 也有自己的統計。兩份資料都由網易的 GLIB 論文轉引。</p>
+
+  <figure class="figure">
+    <div class="figtitle">手機遊戲相容性測試裡，畫面類問題是最大宗</div>
+    <div class="figsub">各類問題佔全部相容性問題的比例</div>
+    <div class="chart" id="ch-compat"></div>
+    <figcaption>資料：TestBird 2020（11,476 款遊戲、552,851 個問題）；騰訊 WeTest。兩者皆轉引自 Chen 等人，GLIB，FSE 2021。原文稱為「UI glitch」，但主要指畫面渲染壞掉，不是資訊或介面內容的錯。下一張圖是網易自己的 bug 報告，可以看到這類問題大致長什麼樣。轉引資料沒有給出 WeTest 的當機比例。</figcaption>
+  </figure>
+
+  <p>手機遊戲裡的「UI glitch」到底長什麼樣？網易從 20 款遊戲的 466 份 bug 報告裡篩出 201 張截圖，逐張分類：</p>
+
+  <figure class="figure">
+    <div class="figtitle">手機遊戲的畫面 glitch 一半以上是不正常的色塊，文字問題只佔 2%</div>
+    <div class="figsub">網易 20 款手機遊戲的 201 張 glitch 截圖，各類型所佔比例</div>
+    <div class="chart" id="ch-glib"></div>
+    <figcaption>資料：Chen 等人，GLIB，FSE 2021，第 3.2 節。</figcaption>
+  </figure>
+
+  <p>把這幾份資料放在一起看：<strong>當機</strong>在 Steam 資料裡最嚴重、最常復發，在手機相容性測試裡也排第二；<strong>畫面壞掉</strong>的量很大，而且長相很集中。但有一點要小心：Steam 排第一的 <strong>Information</strong> 是畫面正常、上面寫的內容錯了；手機資料裡的「文字錯位或重疊」是文字本身被畫壞了。兩者不是同一件事，最後一頁會再回到這一點。</p>
+
+  <h2 id="why-hard">三、為什麼這些 bug 難抓</h2>
+
+  <p>Politowski 等人回顧遊戲測試的文獻時發現，開發者「幾乎完全依賴人工試玩和測試者的經驗」。他們另一份開發者問卷顯示，大家對自動化 agent 普遍存疑，最常見的顧慮是前期要投入的成本：建工具、訓練 agent，而且小型團隊根本找不到適用的方案（這份問卷只有 12 位受訪者）。</p>
+
+  <p>自動化之所以難推，跟 bug 本身的性質有關。Truelove 除了標記更新說明，也問卷調查了 47 位遊戲開發者，請他們說明這些 bug 為什麼一直出現：</p>
+
+  <blockquote>開發的重心是遊戲機制，資訊相關的元件通常被排到流程最後，截止日一到就做不好。<cite>關於 Information bug</cite></blockquote>
+  <blockquote>正確的資訊可能「埋在資料檔裡」，測試的人不一定找得到。<cite>關於 Information bug（作者整理開發者的回答）</cite></blockquote>
+  <blockquote>畫面的邊角情況很容易在測試時漏掉。<cite>關於 Game Graphics bug</cite></blockquote>
+  <blockquote>每一種動作在每一種情境下的每一種順序，組合起來通常根本不可能測完。<cite>關於 Action bug</cite></blockquote>
+
+  <p>這四句話指出四種困難：資訊被排到最後才做、正確答案不在畫面上、畫面的邊角情況太多、動作組合多到走不完。後面五頁會一再碰到這幾件事。</p>
+
+  <h2 id="families">四、五個需要攻克的主題</h2>
+
+  <p>這份報告把 bug 分成五個主題，各開一頁。挑選的理由各不相同：當機最嚴重；畫面渲染和資訊類最常見；動作與互動常見又最難測；時間性 glitch 在更新說明裡很少，但它是 Lewis 分類最上層的一半，也是近兩年研究最集中、成績最差的地方，它少見也可能只是因為難以被發現和寫進更新說明。每一頁都依同樣的順序講：問題怎麼定義、現在有哪幾種做法、各自做到哪裡、還卡在哪裡。</p>
+
+  <div class="cards">
+    <a class="card" href="crash.html">
+      <div class="t">當機</div>
+      <div class="m">對應 Truelove：Crash</div>
+      <div class="d">最嚴重、最常復發。難的不是「認出當機」，而是從玩家一段模糊的回報，重新走到當機的那一刻。</div>
+    </a>
+    <a class="card" href="graphics.html">
+      <div class="t">畫面渲染</div>
+      <div class="m">對應 Truelove：Game Graphics，以及看得見的 Collision、Position of Object</div>
+      <div class="d">量最大、研究最多。公開 benchmark 上表現不錯，換到真實的開發資料就大幅退步。</div>
+    </a>
+    <a class="card" href="temporal.html">
+      <div class="t">時間性 glitch</div>
+      <div class="m">對應 Lewis 的 temporal 類中，跟動作與畫面變化有關的部分</div>
+      <div class="d">單張畫面看不出來，要看前後變化。現有的影片模型在這裡幾乎是用猜的。</div>
+    </a>
+    <a class="card" href="interaction.html">
+      <div class="t">動作與互動</div>
+      <div class="m">對應 Truelove：Action、Triggered Event、Context State、Object Persistence</div>
+      <div class="d">組合多到測不完，而且很多問題只看畫面分不出來，要知道玩家按了什麼。</div>
+    </a>
+    <a class="card" href="information.html">
+      <div class="t">資訊與介面</div>
+      <div class="m">對應 Truelove：Information、User Interface</div>
+      <div class="d">更新說明裡最常被修的一類。文字被畫壞還看得出來；內容寫錯了，得知道正確答案才看得出來。</div>
+    </a>
+  </div>
+
+  <p class="small">不在這份報告範圍內的類別：音效、網路與效能（Implementation Response；卡頓除外，它的偵測方式跟時間性 glitch 相同，放在時間性那一頁）、作弊漏洞、NPC 行為、鏡頭、數值設定（Value）、物件屬性交互、出界（Bounds）。它們同樣重要，但研究脈絡跟上面五類差很多。</p>
+
+  <h2 id="common">五、五個主題的共同處境</h2>
+  <p>把五頁放在一起看，有幾件事反覆出現。這裡只描述現況。</p>
+  <ul>
+    <li><strong>評測用的 bug 大多是研究者自己放進去的。</strong>時間性、互動類的 benchmark 幾乎全是注入的；類別和難度由作者決定，很少說明在真實遊戲裡有多常見。</li>
+    <li><strong>同一批小場景被反覆使用。</strong>TempGlitch、Sony 的穿模研究、RefGlitch-Bench 都建在 Godot 的範例專案上；ACGB 是 64×64 的小遊戲。</li>
+    <li><strong>公開資料普遍高估了表現。</strong>同樣的模型和提問方式，公開截圖上 82.8%，工業開發資料上 46%；AdbGPT 自報 81%，重測 36% 到 74%。</li>
+    <li><strong>「本來應該發生什麼」常常不在畫面上。</strong>當機要從回報推回步驟，互動 bug 要知道玩家按了什麼，資訊類要知道正確數值；只看畫面的方法在這三處都碰到原理上的限制。</li>
+    <li><strong>最好的資料在業界，而且是封閉的。</strong>工業 QA 錄影、bug 單和多語系截圖出現在論文裡，但幾乎都沒有公開。</li>
+    <li><strong>不少關鍵結果還是預印本。</strong>TempGlitch、ACGB 等近一年的重要數字，尚未經過正式審查。</li>
+  </ul>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>C. Lewis, J. Whitehead, N. Wardrip-Fruin. What went wrong: a taxonomy of video game bugs. FDG 2010. <a href="https://www.researchgate.net/publication/228729831_What_Went_Wrong_A_Taxonomy_of_Video_Game_Bugs">連結</a></li>
+    <li>A. Truelove, E. S. de Almeida, I. Ahmed. We'll Fix It in Post: What Do Bug Fixes in Video Game Update Notes Tell Us? <a href="https://arxiv.org/abs/2103.03997">arXiv 2103.03997</a> · <a href="http://stairs.ics.uci.edu/papers/ICSE_2021_Poster_CR.pdf">ICSE 2021 poster</a></li>
+    <li>N. A. Butt 等人. Deriving and Evaluating a Detailed Taxonomy of Game Bugs. <a href="https://arxiv.org/abs/2311.16645">arXiv 2311.16645</a></li>
+    <li>VGBT: Organizing Chaos with a Player-Focused Taxonomy of Video Game Bugs. Multimedia Tools and Applications, 2025. <a href="https://link.springer.com/article/10.1007/s11042-025-21109-1">連結</a></li>
+    <li>K. Chen 等人. GLIB: Towards Automated Test Oracle for Graphically-Rich Applications. FSE 2021. <a href="https://arxiv.org/abs/2106.10507">arXiv 2106.10507</a></li>
+    <li>C. Politowski, F. Petrillo, Y.-G. Guéhéneuc. A Survey of Video Game Testing. <a href="https://arxiv.org/abs/2103.06431">arXiv 2103.06431</a></li>
+    <li>C. Politowski, Y.-G. Guéhéneuc, F. Petrillo. Towards Automated Video Game Testing: Still a Long Way to Go. <a href="https://arxiv.org/abs/2202.12777">arXiv 2202.12777</a></li>
+  </ol>
+
+  <div class="pagenav"><span></span><a href="crash.html">下一頁：當機 →</a></div>
+</main>
+
+<script>
+Charts.hbar('#ch-compat', {
+  title: '手機遊戲相容性問題的比例',
+  max: 50, unit: '%', ticks: [0, 25, 50], decimals: 1, labelWidth: 200,
+  rows: [
+    { label: 'WeTest：畫面顯示異常', value: 47.5, hl: true },
+    { label: 'TestBird：畫面顯示異常', value: 39.95, hl: true, text: '40.0%' },
+    { label: 'TestBird：當機', value: 28.76, text: '28.8%' }
+  ]
+});
+Charts.hbar('#ch-glib', {
+  title: '網易 201 張 glitch 截圖的類型分布',
+  max: 60, unit: '%', ticks: [0, 30, 60], decimals: 0, labelWidth: 200,
+  rows: [
+    { label: '不正常的色塊', value: 56, hl: true },
+    { label: '隨機雜訊', value: 17 },
+    { label: '局部重複', value: 12 },
+    { label: '前一幀殘影', value: 6 },
+    { label: '物件缺件', value: 3 },
+    { label: '文字錯位或重疊', value: 2 },
+    { label: '過度曝光', value: 2 },
+    { label: '黑邊', value: 2 }
+  ]
+});
+</script>
+</body>
+</html>

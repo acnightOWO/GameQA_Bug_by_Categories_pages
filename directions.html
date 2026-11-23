@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>可行方向 · 遊戲 Bug 地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="assets/style.css?v=2">
+<style>
+  .yes { color: var(--good); font-weight: 700; }
+  .pt { color: var(--c3); font-weight: 700; }
+  .no { color: var(--bad); font-weight: 700; }
+  .spec { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 6px 14px; margin: 14px 0 18px; font-size: 15px; line-height: 1.7; }
+  .spec dt { color: var(--muted); font-weight: 700; font-size: 13.5px; padding-top: 2px; }
+  .spec dd { margin: 0; }
+  @media (max-width: 560px) { .spec { grid-template-columns: minmax(0, 1fr); } .spec dt { padding-top: 8px; } }
+  .gap { background: var(--accent-soft); border-radius: 6px; padding: 12px 16px; margin: 14px 0 8px; font-size: 15px; }
+  .gap strong { color: var(--accent); }
+  .gap ul { margin: 4px 0 0; padding-left: 1.2em; }
+  td.c { text-align: center; white-space: nowrap; }
+  td ul { margin: 0; padding-left: 1.1em; }
+  tbody th { width: 6.5em; }
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="章節">
+  <ul>
+    <li><a href="index.html">總覽</a></li>
+    <li><a href="crash.html">當機</a></li>
+    <li><a href="graphics.html">畫面渲染</a></li>
+    <li><a href="temporal.html">時間性</a></li>
+    <li><a href="interaction.html">動作與互動</a></li>
+    <li><a href="information.html">資訊與介面</a></li>
+    <li><a href="directions.html" aria-current="page">可行方向</a></li>
+  </ul>
+</nav>
+
+
+<main class="page">
+  <div class="kicker">研究方向</div>
+  <h1>現在可以進行的方向</h1>
+  <p class="lede">七個獨立的方向。每個列出目標、實現方式、需要的資源與參數、現成的 benchmark 和 baseline，以及可能的隱患。資源與參數是估計值，實際要看遊戲和模型。</p>
+
+  <details class="catlist">
+    <summary>本頁提到的論文在做什麼（點開）</summary>
+    <div class="tablebox">
+    <table>
+      <thead><tr><th>論文</th><th>想做什麼</th><th>怎麼做</th></tr></thead>
+      <tbody>
+        <tr><td>Politowski 等人</td><td>整理遊戲測試研究，並了解學術方案離業界需求多遠</td><td>文獻回顧加開發者問卷</td></tr>
+        <tr><td>Lewis 2010</td><td>回答「遊戲會怎麼壞」</td><td>蒐集線上影片和玩家社群的 glitch 來分類，共 11 類</td></tr>
+        <tr><td>Truelove 2021</td><td>找出哪些 bug 最常被修、最常復發、最嚴重</td><td>標註 Steam 30 款熱門遊戲的更新說明，加開發者問卷</td></tr>
+        <tr><td>Butt 2023／VGBT 2025</td><td>做更完整的 bug 分類</td><td>多來源文獻回顧加從業者問卷，63 類；VGBT 套用到 0 A.D. 回報</td></tr>
+        <tr><td>Wuji（ASE 2019）</td><td>自動測戰鬥類商業遊戲</td><td>演化演算法加強化學習，兼顧打贏和探索</td></tr>
+        <tr><td>TITAN（預印本）</td><td>用 LLM agent 自動測遊戲</td><td>GPT-4o 玩 MMORPG，用當機、卡關、超時自動判斷異常</td></tr>
+        <tr><td>AdbGPT（ICSE 2024）</td><td>依 bug 回報自動重現 Android app 的問題</td><td>LLM 把回報拆成步驟，再在畫面上執行</td></tr>
+        <tr><td>BugCraft（ASE 2025）</td><td>依當機回報在遊戲裡重現當機</td><td>LLM 整理步驟，VLM agent 用 Minecraft 專用指令執行</td></tr>
+        <tr><td>Ubisoft 當機分流（ICSE SEIP 2025）</td><td>上線後提早找出會快速擴散的當機</td><td>用前一款遊戲的資料預測，比較 stack trace 相似度和機器學習</td></tr>
+        <tr><td>GLIB（FSE 2021）</td><td>自動判斷截圖有沒有畫面 glitch</td><td>改渲染程式產生大量壞畫面，訓練 CNN</td></tr>
+        <tr><td>OwlEye（ASE 2020）</td><td>抓 app 截圖裡的文字重疊、模糊等顯示問題</td><td>CNN 看截圖</td></tr>
+        <tr><td>AG3（FSE 2023）</td><td>抓多語系遊戲的文字重疊和溢出</td><td>專門訓練一個看截圖的模型</td></tr>
+        <tr><td>ECHOTEST</td><td>抓字幕跟語音對不上</td><td>分別取出字幕文字和語音轉的文字再比對</td></tr>
+        <tr><td>World of Bugs</td><td>不靠壞畫面樣本也能抓 bug</td><td>只用正常畫面訓練自編碼器，還原不回來就算異常</td></tr>
+        <tr><td>GlitchBench（CVPR 2024）</td><td>量 VLM 能不能認出遊戲 glitch</td><td>Reddit 遊戲影片截圖加合成場景出題</td></tr>
+        <tr><td>VideoGameQA-Bench（NeurIPS 2025）</td><td>全面測 VLM 能不能做遊戲 QA</td><td>截圖、影片等多種題型，含視覺回歸與 UI 題</td></tr>
+        <tr><td>Lu 等人（與 EA，兩篇預印本）</td><td>一篇從 bug 影片找出出事的那一格；一篇看 VLM 在真實測試錄影上能做多少</td><td>VLM 依描述挑關鍵幀；41 小時錄影抽關鍵幀交給模型，再加裁判或檢索</td></tr>
+        <tr><td>Sony 穿模研究（CoG 2026）</td><td>量 VLM 抓穿模的能力</td><td>agent 探索 Godot 場景，改引擎自動標出穿模</td></tr>
+        <tr><td>RefGlitch-Bench（預印本）</td><td>看給一張參考畫面能不能幫 VLM</td><td>Godot 場景裡 1,000 組參考與測試配對</td></tr>
+        <tr><td>TempGlitch（預印本）</td><td>量 VLM 能不能抓時間性 glitch</td><td>在 Godot 範例注入 glitch，每支配一支很像的正常影片</td></tr>
+        <tr><td>Huynh &amp; Pham（預印本，含 ACGB）</td><td>只用正常影片學「什麼叫正常」；以及偵測器要不要知道玩家輸入</td><td>比較外觀距離和下一格預測兩種算法；自建 5 款小遊戲注入 glitch</td></tr>
+        <tr><td>PhysGame</td><td>收集遊戲裡違反物理常識的影片</td><td>整理成 880 支影片的資料集</td></tr>
+        <tr><td>VideoGlitchBench（ACM MM 2026，預印本）</td><td>讓模型說出發生什麼、在第幾秒</td><td>5,238 支 Reddit 遊戲影片標時間；GliDe 讓模型分段掃描、推理、定位</td></tr>
+        <tr><td>TimeBlind／MotionBlind</td><td>測通用影片模型懂不懂時間變化</td><td>成對影片只差時間結構；測速度、幅度、方向</td></tr>
+        <tr><td>GELID（EMSE 2023）</td><td>從實況影片找出遊戲問題</td><td>用實況主的字幕切片段，再分類、分群</td></tr>
+        <tr><td>GBGallery（EMSE 2022）</td><td>讓自動測試方法可以互相比較</td><td>5 款商業遊戲、76 個可開關的真實 bug，附判定程式</td></tr>
+        <tr><td>GBQA（ICLR 2026 workshop，預印本）</td><td>考 LLM 當 QA 工程師</td><td>30 款生成遊戲注入 124 個 bug，agent 最多走 500 步</td></tr>
+        <tr><td>OSSGameBench（MSR 2026）</td><td>整理開源遊戲的 issue 供研究</td><td>950 個 GitHub repo、約 32 萬則 issue</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </details>
+
+  <div class="toc">
+    <ol>
+      <li><a href="#d1">單一遊戲：用 mutation 資料微調 VLM 偵測視覺 bug</a></li>
+      <li><a href="#d2">互動 bug：agent 自動遊玩，用遊戲內部狀態判斷</a></li>
+      <li><a href="#d3">時間性 glitch：影片偵測與定位</a></li>
+      <li><a href="#d4">資訊內容錯誤：畫面顯示值 vs 遊戲內部值</a></li>
+      <li><a href="#d5">VLM 誤報：在真實正常畫面上的 false positive</a></li>
+      <li><a href="#d6">當機重現：從 bug report 到重現步驟</a></li>
+      <li><a href="#d7">真實 bug 實證分析</a></li>
+      <li><a href="#sum">總表</a></li>
+    </ol>
+  </div>
+
+  <section class="school" id="d1">
+    <div class="label">方向一</div>
+    <h3>單一遊戲：用 mutation 資料微調 VLM 偵測視覺 bug</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>輸入一張截圖，輸出有沒有 bug、bbox、類別；在這款遊戲的真實 bug 截圖上評估。</td></tr>
+      <tr><th>實現方式</th><td>改遊戲的渲染程式，在繪製時隨機替換貼圖、改顏色、不畫、位移、截斷字串，同時記下被改元素的 bbox 當標籤。用腳本或 AI 自動遊玩收截圖。以 LoRA 微調開源 VLM（如 Qwen-VL），輸出 JSON。</td></tr>
+      <tr><th>需要的</th><td>可修改渲染層的開源遊戲；可 headless 執行。訓練資料約 1 萬到 5 萬張（正常與有 bug 約各半）。8B 模型 LoRA（r 16–64）約需 1 張 48GB 或 2 張 24GB GPU；32B 需 QLoRA 或多卡。真實測試集約數百張，需人工標 bbox。</td></tr>
+      <tr><th>Benchmark</th><td><span class="pt">部分</span>　沒有單一遊戲的真實 bug 測試集。可借用 GLIB 公開測試集、GlitchBench、VideoGameQA-Bench 做跨遊戲對照。</td></tr>
+      <tr><th>Baseline</th><td><span class="yes">有</span>　GLIB（CNN）、ResNet／ViT 分類器、PatchCore 等只用正常畫面的 anomaly detection、零樣本 VLM（GPT-4o、Qwen-VL）。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>GLIB 只用真實 bug 截圖訓練時 recall 只有 0.563，論文也寫明產生訓練資料需要遊戲原始碼：注入資料有必要，但每款遊戲都要自己做。</li><li>網易 201 張 glitch 截圖裡 56% 是不正常的色塊，文字類只佔 2%：注入類型應該依真實分布挑，不是想得到什麼就做什麼。</li><li>World of Bugs 的自編碼器對黑畫面、貼圖遺失幾乎全抓得到，對穿模幾乎抓不到：明顯的 bug 簡單方法就夠，真正難的是細微的。</li><li>GPT-4o 在公開截圖上 82.8%，在工業開發截圖上 46%：公開資料偏向明顯的 glitch，評估要用真實開發中的 bug。</li><li>GLIB 公開測試集的正常圖全部來自訓練用的遊戲：測試集要放沒見過的畫面的正常圖，才量得到誤報。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>注入的 bug 和真實 bug 長得不一樣，模型只學會認注入的模式。</li>
+          <li>很多注入的結果肉眼看不出來（被蓋住、顏色差太少），標籤會有雜訊，要做可見性過濾。</li>
+          <li>真實 bug 太細微時，人都分不出來，評估沒有意義（fheroes2 就是這個情況）。</li>
+          <li>真實截圖的解析度、視窗邊框、壓縮跟訓練資料不同，要做資料擴增。</li>
+          <li>跟 GLIB 差別不大，創新點容易被質疑。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+
+    <p><strong>候選遊戲</strong>（開源、3D、回報常附遊戲畫面；回報數量還沒實際統計）</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>遊戲</th><th>類型 / 技術</th><th>回報裡的 bug 例子</th><th>注意</th></tr></thead>
+      <tbody>
+        <tr><td>OpenMW</td><td>開放世界 RPG，C++ / OpenSceneGraph，GitLab</td><td>地形貼圖透明、角色臉全黑、UI 貼圖壞掉</td><td>需要 Morrowind 原版素材（付費）</td></tr>
+        <tr><td>0 A.D.</td><td>即時戰略，C++，Gitea</td><td>單位只剩武器可見、建築顏色錯、地形閃爍</td><td>素材免費；VGBT 已用它的 594 份回報做分類</td></tr>
+        <tr><td>Daggerfall Unity</td><td>RPG，Unity，GitHub</td><td>房屋貼圖錯、地面出現格線</td><td>原版素材官方免費；可接 Unity 工具</td></tr>
+        <tr><td>Veloren</td><td>體素 RPG，Rust / wgpu，GitLab</td><td>還沒找到具體例子</td><td>素材免費</td></tr>
+        <tr><td>SuperTuxKart</td><td>賽車，C++，GitHub</td><td>殘影、陰影閃爍</td><td>很多是 Intel / Mesa 驅動問題</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small">前三款不在 GitHub，所以不在 OSSGameBench。3D 遊戲的畫面回報常有一部分是 GPU 驅動造成的，測試集要先剔除。</p>
+  </section>
+
+  <section class="school" id="d2">
+    <div class="label">方向二</div>
+    <h3>互動 bug：agent 自動遊玩，用遊戲內部狀態判斷</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>找出按了沒反應、點不到、任務無法完成、卡住等 bug；分開報告「沒走到」和「走到但沒偵測到」。</td></tr>
+      <tr><th>實現方式</th><td>agent（RL 或 LLM / VLM）只用鍵盤滑鼠操作。判斷用遊戲內部資料：輸入後狀態有沒有變、UI 是否擋住點擊、任務旗標。可記錄成功通關的操作序列，在新版本重播比對。</td></tr>
+      <tr><th>需要的</th><td>能讀內部狀態的遊戲（開源或引擎外掛）；可重現的隨機種子；大量平行執行的 CPU。LLM agent 每局會呼叫模型數百到數千次，API 成本或本地推論 GPU 要估。</td></tr>
+      <tr><th>Benchmark</th><td><span class="pt">部分</span>　GBGallery（5 款遊戲、76 個真實 bug，只有執行檔）；GBQA、ACGB 未公開；World of Bugs 停止維護。</td></tr>
+      <tr><th>Baseline</th><td><span class="pt">部分</span>　隨機、DQN、A2C、好奇心 A2C、Wuji（GBGallery 內建）；TITAN（未公開）。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>ACGB 裡隨機策略觸發的 bug 有 0.718 被認出來，沒找到的大多是根本沒走到：瓶頸在探索，不在辨識。</li><li>以「驚訝」為目標的 agent 觸發 bug 的比例（0.275）比亂按（0.435）還低，誤報多了近 15 倍：好奇心式探索會把 agent 帶偏。</li><li>只看畫面的方法在按鍵錯亂上接近或低於隨機（VideoMAE 0.42、V-JEPA 2 0.52）：這類 bug 一定要知道玩家按了什麼。</li><li>GBQA 的困難 bug 到 500 步還沒飽和；開發者也說所有動作順序在組合上測不完。</li><li>TITAN 的 LLM agent 抓到的注入 bug 約是 RL 的兩倍，已部署在 8 條實際 QA 流程；但開發者問卷顯示，大家對自動化 agent 最大的顧慮是前期成本。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>bug 由自己放、自己評估，會被質疑循環論證。</li>
+          <li>操作組合太多，困難的 bug 要很長的序列才走得到，結果主要被探索能力決定。</li>
+          <li>讀得到內部狀態時，很多 bug 用規則就判斷完了，VLM 的角色不明確。</li>
+          <li>每款遊戲都要寫操作介面和狀態讀取，工程量大，很難換遊戲。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="school" id="d3">
+    <div class="label">方向三</div>
+    <h3>時間性 glitch：影片偵測與定位</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>輸入一段遊戲影片，判斷有沒有閃爍、動畫凍結、跳幀、瞬移，並給出時間點。</td></tr>
+      <tr><th>實現方式</th><td>(1) 只用正常影片訓練，用特徵距離或預測誤差當異常分數（VideoMAE、V-JEPA）。(2) 在遊戲裡注入時間性 bug，產生有時間標籤的影片微調影片 VLM。(3) 直接從引擎記錄每幀狀態，用規則判斷。</td></tr>
+      <tr><th>需要的</th><td>影片片段約 2–10 秒，取樣 4–16 fps。影片 VLM 的輸入 token 很多，微調 8B 模型建議 80GB GPU 或多卡。注入資料需要可控制的遊戲環境。</td></tr>
+      <tr><th>Benchmark</th><td><span class="yes">有</span>　TempGlitch（750 組有 / 無 bug 配對）、VideoGlitchBench（120 款遊戲、5,238 支影片）、PhysGame（880 支）。</td></tr>
+      <tr><th>Baseline</th><td><span class="yes">有</span>　VLM 在 TempGlitch 上 49–54%；VideoMAE kNN AUROC 0.69；VideoGlitchBench 最佳 F1 約 40%（閉源模型直接問 26%）。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>凍結的畫面最容易預測，所以用預測誤差的方法在「動畫凍結」上反而低於隨機；外觀距離和可預測性在不同類別各有盲點，可以互補。</li><li>作者把特徵的有效秩從 1.13 拉到 21.30，偵測成績幾乎沒動：問題不在特徵塌縮。</li><li>通用影片的 TimeBlind，最強模型 48.2%、人類 98.2%；MotionBlind 發現多給畫面或挑更好的畫面都補不上差距：不是取樣不夠，是模型本身不懂時間變化。</li><li>GELID 用實況主的字幕切出問題片段，切片段和分群做得不錯，但判斷問題類別的效果有限。</li><li>時間性 bug 在 Steam 更新說明裡很少，但可能只是因為難以被發現和寫進更新說明。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>主要 benchmark 都還是預印本，數字可能改變，也可能很快有人做出更好的方法。</li>
+          <li>取樣 fps 太低會漏掉閃爍這類只持續幾幀的 bug；太高則運算量暴增。</li>
+          <li>凍結的畫面最好預測，用預測誤差的方法會反而判成正常。</li>
+          <li>注入的影片多是簡單場景，跟真實遊戲影片差距大。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="school" id="d4">
+    <div class="label">方向四</div>
+    <h3>資訊內容錯誤：畫面顯示值 vs 遊戲內部值</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>找出數值沒更新、顯示錯誤、說明消失、名稱不一致。</td></tr>
+      <tr><th>實現方式</th><td>OCR 或 VLM 讀出畫面上的文字和數字，跟遊戲內部的值或資料檔比對。拿不到內部值時，比對同一數值在不同畫面、不同時間是否一致。</td></tr>
+      <tr><th>需要的</th><td>能匯出畫面上每段文字及對應內部值的遊戲 hook；遊戲字型的 OCR 準確度要先測。</td></tr>
+      <tr><th>Benchmark</th><td><span class="no">缺</span>　沒有公開資料集；只有零星的真實回報（fheroes2 #7002、TRX #2659、vcmi #3412）。</td></tr>
+      <tr><th>Baseline</th><td><span class="no">缺</span>　AG3、OwlEye 只處理文字重疊、溢出，不處理內容錯。只能自建 OCR + 規則、零樣本 VLM 當 baseline。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>Information 是 Truelove 12,122 筆修正裡最常見的類別，但復發率和嚴重度都不高。</li><li>開發者說正確資訊常常「埋在資料檔裡」，資訊相關元件又常被排到開發最後：答案不在畫面上，這是只看畫面的方法在原理上的限制。</li><li>GLIB 在 AG3 的真實截圖上，文字重疊 recall 7%、文字溢出不到 1%；專門的 AG3 都在 90% 以上，部署兩年找到超過 2,000 個問題：通用偵測器不行，專門做的有效，而且有業界需求。</li><li>ECHOTEST 比對字幕和語音，真實遊戲上 precision 98%：當「另一個正確來源」剛好在影片裡時，內容錯誤是可以自動抓的。</li><li>美術字和做成圖片的文字會讓 OCR 失效；VideoGameQA-Bench 的 UI 單元測試最好也只有 40%。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>能讀內部值時直接比對就好，不需要 VLM，研究價值會被質疑；要找拿不到內部值的情境（黑箱、錄影）。</li>
+          <li>遊戲的美術字、圖片文字 OCR 讀不出來。</li>
+          <li>很多正確值是計算出來的，「什麼才是對的值」本身要定義。</li>
+          <li>Benchmark 和 baseline 都自己做，說服力較弱。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="school" id="d5">
+    <div class="label">方向五</div>
+    <h3>VLM 誤報：在真實正常畫面上的 false positive</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>量化並降低 VLM 在正常畫面上的誤報，同時維持 recall。</td></tr>
+      <tr><th>實現方式</th><td>取 VLM 回答 true / false 的機率做 threshold 校準；加同場景的參考圖；多次取樣看一致性；把誤報分類（陰影、遮擋、特殊美術風格、特效）。</td></tr>
+      <tr><th>需要的</th><td>大量隨機抽樣的正常畫面（自動遊玩錄製即可，數千張）；能取得 logprob 的模型（開源或支援 logprobs 的 API）；主要是推論成本。</td></tr>
+      <tr><th>Benchmark</th><td><span class="yes">有</span>　GlitchBench、VideoGameQA-Bench、RefGlitch-Bench。</td></tr>
+      <tr><th>Baseline</th><td><span class="yes">有</span>　EA 錄影上 precision 約 0.50，加 judge 模型最好 0.57；穿模偵測換成隨機正常畫面後掉 9–15 個百分點。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>EA 41 小時測試錄影上，gpt-4.1-mini 的 precision 0.50；加 judge 模型最好到 0.57，圖片檢索反而讓結果變差：事後過濾的改善有限。</li><li>模型抓到的 bug 有 46.8% 是畫面上的錯誤訊息文字：模型偏向最顯眼的東西，細微的渲染錯誤反而少。</li><li>Sony 的穿模研究中，正常畫面換成隨機抽樣後準確率掉 9–15 個百分點，換成靠牆、部分遮蔽這類模稜兩可的畫面掉 19–25 個百分點：誤報主要來自模稜兩可的正常畫面。</li><li>RefGlitch：給參考圖對多數模型有幫助，人工挑的最好，但 Gemini 反而變差；不相關的參考讓小模型 F1 掉到 0.2 以下。</li><li>VideoGameQA-Bench 的視覺回歸（參考圖 vs 測試圖）最好的模型只有 45.2%，連明顯被拿掉的物件都常常沒發現。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>貢獻偏分析，較適合 workshop 或短文。</li>
+          <li>商用模型更新快，結果容易過時。</li>
+          <li>降低誤報通常會犧牲 recall，要報完整的 precision–recall 曲線。</li>
+          <li>參考圖本身可能有 bug（RefGlitch 自動選的參考有 33.4% 有問題）。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="school" id="d6">
+    <div class="label">方向六</div>
+    <h3>當機重現：從 bug report 到重現步驟</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>輸入玩家的當機回報，自動在遊戲裡重現當機。</td></tr>
+      <tr><th>實現方式</th><td>LLM 把回報整理成步驟，再由 agent 在遊戲裡執行；用 stack trace 縮小範圍。比較遊戲專用指令集和通用 computer-use agent。</td></tr>
+      <tr><th>需要的</th><td>能切到出事版本的遊戲（可編譯舊版）；每份回報要人工確認能重現；遊戲的操作 API。</td></tr>
+      <tr><th>Benchmark</th><td><span class="pt">部分</span>　BugCraft-Bench（Minecraft，86 份）是唯一遊戲版本。</td></tr>
+      <tr><th>Baseline</th><td><span class="yes">有</span>　BugCraft；通用 computer-use agent 最好 25.5%，UI-TARS 0%。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>當機在 Truelove 的資料裡出現在緊急更新的比例最高（38%），也最常復發：需求很明確。</li><li>AdbGPT 自報重現率 81.3%，兩份他人重測是 74% 和約 36%：要用別人沒調過的資料評估。</li><li>BugCraft 中 LLM 整理出的步驟約三分之一缺步驟、下錯指令或邏輯不通：瓶頸常在讀懂回報。</li><li>BugCraft 的作者指出，Android 的方法把畫面轉成文字處理，但遊戲需要空間推理和狀態相依，app 的方法搬不過來。</li><li>Ubisoft 的當機分流研究，最好的方法找出超過一半的病毒式當機類型：上線後的分流也是一個可做的子問題。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>回報常缺步驟，BugCraft 的 100 份裡 14 份人都重現不了。</li>
+          <li>舊版本編譯、存檔、設定還原的成本很高。</li>
+          <li>跟視覺、VLM 的關係較遠。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="school" id="d7">
+    <div class="label">方向七</div>
+    <h3>真實 bug 實證分析</h3>
+    <div class="tablebox"><table><tbody>
+      <tr><th>目標</th><td>統計真實遊戲 bug 中，多少看單張截圖就能判斷、多少要看影片、多少要知道玩家輸入或遊戲狀態。</td></tr>
+      <tr><th>實現方式</th><td>從開源遊戲的 issue 抽樣，按 Lewis / Truelove 分類，再標「判斷需要什麼資訊」；兩人獨立標註，計算 Cohen's kappa。</td></tr>
+      <tr><th>需要的</th><td>樣本約 300–500 則（依類別分層抽樣）；兩位標註者；標註指南。</td></tr>
+      <tr><th>Benchmark</th><td>不適用。資料來源：OSSGameBench（950 個 GitHub repo、約 32 萬則 issue），可另加 OpenMW、0 A.D. 等。</td></tr>
+      <tr><th>Baseline</th><td>不適用；可對照 Truelove 的統計和 VGBT 在 0 A.D. 上的分類。</td></tr>
+      <tr><th>文獻的啟示</th><td><ul><li>Lewis 的 11 類、Truelove 的 20 類、Butt 的 63 類都說明「有哪些類」，但除了 Truelove，都沒有大規模的頻率資料。</li><li>現有時間性、互動類 benchmark 的 bug 幾乎都是作者注入的，類別和難度由作者決定，很少說明在真實遊戲裡有多常見：實證結果正好能補這個依據。</li><li>OSSGameBench 只有各專案自訂的 label，沒有 bug 分類，也沒有可編譯版本或重現步驟；一般軟體有 Defects4J，遊戲沒有。</li><li>VGBT 已把分類套用到 0 A.D. 的 594 份回報，可以當標註方式的參考。</li><li>手機遊戲相容性測試裡，畫面顯示異常佔約 40–48%、當機約 29%（TestBird、WeTest）：PC 更新說明和手機測試看到的分布不同，平台要分開看。</li></ul></td></tr>
+      <tr><th>可能的隱患</th><td>
+        <ul>
+          <li>開源遊戲的 bug 分布可能跟商業遊戲不同。</li>
+          <li>issue 描述不完整，很多只看文字判斷不了類別。</li>
+          <li>屬於實證研究，沒有方法貢獻，適合 MSR 類短文。</li>
+        </ul></td></tr>
+    </tbody></table></div>
+  </section>
+
+  <h2 id="sum">總表</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>方向</th><th>Benchmark</th><th>Baseline</th><th>最大的隱患</th></tr></thead>
+    <tbody>
+      <tr><td>一、單一遊戲視覺 bug</td><td class="c pt">部分</td><td class="c yes">有</td><td>注入的 bug 跟真實的不像</td></tr>
+      <tr><td>二、互動 bug</td><td class="c pt">部分</td><td class="c pt">部分</td><td>自己放 bug 自己評估；工程量大</td></tr>
+      <tr><td>三、時間性 glitch</td><td class="c yes">有</td><td class="c yes">有</td><td>預印本為主，競爭可能很快</td></tr>
+      <tr><td>四、資訊內容錯誤</td><td class="c no">缺</td><td class="c no">缺</td><td>「直接讀內部值就好」的質疑</td></tr>
+      <tr><td>五、VLM 誤報</td><td class="c yes">有</td><td class="c yes">有</td><td>貢獻偏分析</td></tr>
+      <tr><td>六、當機重現</td><td class="c pt">部分</td><td class="c yes">有</td><td>重現與舊版編譯成本高</td></tr>
+      <tr><td>七、真實 bug 實證</td><td>不適用</td><td>不適用</td><td>沒有方法貢獻</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>參考資料</h2>
+  <ol class="refs">
+    <li>Lewis 2010；Truelove 2021；Butt 2023；VGBT 2025；GLIB（FSE 2021）；World of Bugs；GlitchBench（CVPR 2024）；VideoGameQA-Bench（NeurIPS 2025）；Lu 等人 arXiv 2508.04895、2603.22706；Celemin 等人 arXiv 2607.25921；RefGlitch-Bench arXiv 2604.11082；TempGlitch arXiv 2605.21443；Huynh &amp; Pham 2026；VideoGlitchBench arXiv 2604.07818；PhysGame arXiv 2412.01800；TimeBlind；MotionBlind；GELID（EMSE 2023）；GBGallery（EMSE 2022）；GBQA arXiv 2604.02648；TITAN arXiv 2509.22170；Wuji（ASE 2019）；Politowski 等人；AG3（FSE 2023）；OwlEye（ASE 2020）；ECHOTEST；BugCraft arXiv 2503.20036；AdbGPT（ICSE 2024）；OSSGameBench（MSR 2026）。</li>
+    <li>OSSGameBench：<a href="https://zenodo.org/records/18359123">Zenodo</a></li>
+    <li>OpenMW 回報：<a href="https://gitlab.com/OpenMW/openmw/-/issues/8270">#8270</a> · <a href="https://gitlab.com/OpenMW/openmw/-/issues/6687">#6687</a> · <a href="https://gitlab.com/OpenMW/openmw/-/issues/9461">#9461</a></li>
+    <li>0 A.D.：<a href="https://gitea.wildfiregames.com/0ad/0ad">Gitea</a> · <a href="https://wildfiregames.com/forum/topic/139404-units-are-invisible-except-for-weapons-and-heads/">單位隱形</a> · <a href="https://wildfiregames.com/forum/topic/98808-graphics-rendering-issue-in-a26/">渲染問題</a></li>
+    <li>Daggerfall Unity：<a href="https://forums.dfworkshop.net/viewtopic.php?p=3466">房屋貼圖</a> · <a href="https://forums.dfworkshop.net/viewtopic.php?p=16970">地面格線</a></li>
+    <li>SuperTuxKart：<a href="https://communities.intel.com/thread/104464">殘影</a> · <a href="https://discourse.ubuntubudgie.org/t/supertuxkart-in-18-04-flickering-shadows-with-intel-i915/2289">陰影閃爍</a></li>
+    <li>Veloren：<a href="https://veloren.net/blog/devblog-19">開發日誌</a></li>
+  </ol>
+
+  <div class="pagenav"><a href="information.html">← 資訊與介面</a><a href="index.html">回到總覽</a></div>
+</main>
+</body>
+</html>

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="assets/charts.js"></script>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <li><a href="temporal.html">時間性</a></li>
     <li><a href="interaction.html">動作與互動</a></li>
     <li><a href="information.html">資訊與介面</a></li>
+    <li><a href="directions.html">可行方向</a></li>
   </ul>
 </nav>
 
@@ -33,7 +34,7 @@
   </div>
 
   <h2>問題怎麼定義</h2>
-  <p>Truelove 等人把 Crash 定義為「遊戲當掉或被迫關閉」。在他們標記的 12,122 筆修正裡，當機出現 580 次，其中 219 次出現在緊急更新，比例 38%，是所有類別裡最高的；它也是最常在後續版本再次出現的類別。</p>
+  <p>Truelove 等人（想知道哪些 bug 最常被修；一行行標註 Steam 30 款熱門遊戲的更新說明）把 Crash 定義為「遊戲當掉或被迫關閉」。在他們標記的 12,122 筆修正裡，當機出現 580 次，其中 219 次出現在緊急更新，比例 38%，是所有類別裡最高的；它也是最常在後續版本再次出現的類別。</p>
   <p>當機的研究可以照時間軸分成三段：<strong>開發中</strong>讓自動化程式把遊戲玩到當掉；<strong>收到回報後</strong>依玩家的描述重新走到當機那一刻；<strong>上線後</strong>從大量當機紀錄裡判斷先修哪一個。三段用的方法完全不同。</p>
 
   <h2>現在的做法</h2>
@@ -42,8 +43,22 @@
     <div class="label">流派一 · 自動探索 agent（開發中）</div>
     <h3>讓 agent 自己玩，玩到出事為止</h3>
     <p>這一派的共同想法是：讓 agent 自動玩遊戲，同時用內建的自動判定（oracle）標出異常，例如遊戲是否當掉、任務是否卡住。差別在於誰來決定下一步操作：早期用強化學習，近年改用 LLM。</p>
-    <p>強化學習的代表是 Wuji。Wuji（ASE 2019，網易伏羲與天津大學等）先分析了 4 款商業遊戲的 1,349 個真實 bug，歸納出 4 種自動判定方法，再用演化演算法加上深度強化學習，讓 agent 在「贏下戰鬥」和「探索沒去過的地方」之間取得平衡。它在兩款商業遊戲中找到 3 個先前未知、經開發者確認的 bug。</p>
-    <p>到了 LLM 的時代，浙江大學與網易伏羲的 TITAN 讓 GPT-4o 驅動的 agent 玩兩款商業 MMORPG，並用三種自動判定（是否當機、任務是否卡住、執行是否超時）把異常整理成診斷報告。</p>
+    <p><strong>Wuji</strong>（ASE 2019，網易伏羲與天津大學等；想自動測線上戰鬥遊戲）的做法分三步：</p>
+    <ul>
+      <li><strong>先定義「什麼算出錯」：</strong>分析 4 款商業遊戲的 1,349 個真實 bug，歸納出 4 種程式可以自動判斷的出錯跡象（oracle），測試時就不用人盯著看。</li>
+      <li><strong>同時養一群 agent：</strong>一開始隨機產生一群用神經網路表示的玩法，用演化演算法讓這群 agent 往不同方向發展，盡量走到不同的遊戲狀態。</li>
+      <li><strong>再用強化學習教它們打贏：</strong>只會亂逛的 agent 打不過前面的關卡，到不了後面的內容；所以用深度強化學習提升完成任務的能力。</li>
+    </ul>
+    <p>兩個目標一起最佳化（多目標最佳化）：只追求贏，agent 會一直走同一條最快的路；只追求探索，又過不了關。兩者兼顧，才能走得遠又走得廣，撞上 bug 的機會才大。它在兩款商業遊戲中找到 3 個先前未知、經開發者確認的 bug。</p>
+    <p class="note">Wuji 的做法依論文摘要與後續論文的描述整理；全文在本報告撰寫時無法取得。</p>
+    <p>到了 LLM 的時代，浙江大學與網易伏羲的 <strong>TITAN</strong>（預印本；想讓 LLM agent 像資深測試員一樣玩大型 MMORPG 並找 bug）用 GPT-4o 當大腦，外面包了四個模組，每一步依序執行：</p>
+    <ul>
+      <li><strong>整理狀態：</strong>遊戲的原始狀態太多，直接丟給 LLM 會超出長度也看不懂數字。所以只挑測試員認為重要的項目（位置、目前任務、血量魔力、附近的 NPC 和物品、狀態效果），連續數值改成高中低這類等級，轉成簡短文字。</li>
+      <li><strong>先篩動作：</strong>動作寫成「走到某處、跟某 NPC 說話、攻擊、使用物品」這類範本；再依專家寫的規則和遊戲文件，挑出約 5 個跟當下任務相關的動作推薦給 LLM，例如血量低就建議補血。</li>
+      <li><strong>記憶與反思：</strong>記下走過的動作和到過的狀態。如果連續 20 個動作都沒有進展，就暫停，把目前狀態和歷史交給 LLM 反思：為什麼卡住、下一步該試什麼、這是不是 bug。跨回合也會記住哪些做法試過沒用，下次換別的路。</li>
+      <li><strong>判斷出錯：</strong>三種自動判定。當機就直接記錄；反思後仍然卡住，判定任務可能完成不了，並讓 LLM 寫診斷報告；動作或任務花的時間遠超過平常（例如平常 1 秒的動作花了 10 秒以上），判定效能異常。</li>
+    </ul>
+    <p>論文報告整體誤報率約 30%，多數來自狀態整理沒做好。</p>
     <figure class="figure">
       <div class="figtitle">LLM agent 抓到的注入 bug 是強化學習的近兩倍；人類完成了全部任務，卻只抓到 18%</div>
       <div class="figsub">TITAN 論文中，兩款商業 MMORPG 上的任務完成率與注入 bug 偵測率</div>
@@ -56,12 +71,12 @@
   <section class="school">
     <div class="label">流派二 · 從回報到重現（收到回報後）</div>
     <h3>讀玩家的回報，把當機重新走一遍</h3>
-    <p>這條路線先在 Android app 上成熟。ReCDroid 用自然語言處理加上 GUI 探索；AdbGPT（ICSE 2024）讓 LLM 先把回報拆成步驟，再在畫面上依序執行，作者報告 81.3% 的重現率。不過當別人用自己的資料重新評估時，數字差異很大：</p>
+    <p>這條路線先在 Android app 上成熟。ReCDroid（想依回報自動重現 Android 當機）用自然語言處理加上 GUI 探索；AdbGPT（ICSE 2024）讓 LLM 先把回報拆成步驟，再在畫面上依序執行，作者報告 81.3% 的重現率。不過當別人用自己的資料重新評估時，數字差異很大：</p>
     <figure class="figure">
       <div class="figtitle">AdbGPT 自報 81%，兩份獨立重測分別是 74% 和 36%</div>
       <div class="figsub">Android bug 回報重現率：作者自報 vs 兩份他人重測</div>
       <div class="chart" id="ch-android"></div>
-      <figcaption>資料：AdbGPT 自報值出自 Feng &amp; Chen, ICSE 2024（48 份一般 bug 回報，不限當機；同一篇裡 ReCDroid 是 45.8%）；重測 A 出自 ReBL 論文（73 份當機回報）；重測 B 出自 BugRepro 論文（151 份回報，ReCDroid 重現 38 份、AdbGPT 55 份）。兩份重測都是提出新工具的論文所做，資料集也不同，所以只適合看量級。</figcaption>
+      <figcaption>資料：AdbGPT 自報值出自 Feng &amp; Chen, ICSE 2024（48 份一般 bug 回報，不限當機；同一篇裡 ReCDroid 是 45.8%）；重測 A 出自 ReBL 論文（提出新的 Android 重現工具，並用 73 份當機回報重測舊工具）；重測 B 出自 BugRepro 論文（同樣是提出新工具並重測）（151 份回報，ReCDroid 重現 38 份、AdbGPT 55 份）。兩份重測都是提出新工具的論文所做，資料集也不同，所以只適合看量級。</figcaption>
     </figure>
     <p>遊戲版本的代表是 BugCraft（ASE 2025）。作者從 Minecraft 官方的 bug 追蹤系統挑出 100 份單人模式的當機回報，排除 14 份無法重現的，剩下 86 份組成 BugCraft-Bench。系統分兩步：先讓 LLM 把回報整理成重現步驟，再由看得懂畫面的 agent 透過一套為 Minecraft 寫的指令集在遊戲裡執行。</p>
     <figure class="figure">
@@ -97,6 +112,22 @@
     <li><strong>探索式測試的成績多半來自注入的 bug。</strong>TITAN 的 bug 偵測率是在 9 個人為放進去的 bug 上量的；在真實、未知的 bug 上能找到多少，只能從「找到幾個新 bug」這類個案數字推估。</li>
     <li><strong>上線後的分流仍漏掉不少。</strong>Ubisoft 的研究中，最好的方法找出超過一半的病毒式當機類型，也就是說仍有相當比例在擴散之前沒被標出來；不過被找出的類型涵蓋的當機次數，明顯多於漏掉的。</li>
   </ol>
+
+  <h2 id="next">可行方向</h2>
+  <p>針對上面的缺口，可以直接開始的方向。資源與參數是估計值；完整的實現方式、需要的參數和文獻依據見<a href="directions.html">可行方向</a>。</p>
+  <h3>當機重現：從回報到重現步驟</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>輸入玩家的當機回報，自動在遊戲裡重現當機。</td></tr>
+      <tr><th>做法</th><td>LLM 把回報整理成步驟，agent 在遊戲裡執行；用 stack trace 縮小範圍；比較遊戲專用指令和通用的電腦操作 agent。</td></tr>
+      <tr><th>Benchmark</th><td>部分：BugCraft-Bench（Minecraft，86 份）是唯一的遊戲版本。</td></tr>
+      <tr><th>Baseline</th><td>有：BugCraft 最好 34.9%；通用電腦操作 agent 25.5%，UI-TARS 0%。</td></tr>
+      <tr><th>主要隱患</th><td>回報常缺步驟（BugCraft 的 100 份裡 14 份人也重現不了）；要能編譯舊版本、還原存檔，成本高。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d6">完整說明 →</a></p>
 
   <p>當機至少有一個好處：它發生時沒有人會懷疑。接下來四頁的 bug 都沒有這個好處，遊戲照常執行，只是某個地方「看起來不對」。第一個要看的，是研究最多的畫面渲染。</p>
 

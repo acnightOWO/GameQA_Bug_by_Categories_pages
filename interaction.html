@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="assets/charts.js"></script>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <li><a href="temporal.html">時間性</a></li>
     <li><a href="interaction.html" aria-current="page">動作與互動</a></li>
     <li><a href="information.html">資訊與介面</a></li>
+    <li><a href="directions.html">可行方向</a></li>
   </ul>
 </nav>
 
@@ -29,7 +30,7 @@
 
   <div class="scene">
     <span class="tag">真實案例</span>
-    <p>Truelove 等人在 Black Desert Online 的更新說明裡看到一條修正：「修正了變身為不死柿子騎士時，無法向左或向右奔跑的問題。」問題看起來像位置錯誤，但核心是「做不到本來做得到的動作」，因此被歸為 Action 類。</p>
+    <p>Truelove 等人（想知道哪些 bug 最常被修；一行行標註 Steam 30 款熱門遊戲的更新說明）在 Black Desert Online 的更新說明裡看到一條修正：「修正了變身為不死柿子騎士時，無法向左或向右奔跑的問題。」問題看起來像位置錯誤，但核心是「做不到本來做得到的動作」，因此被歸為 Action 類。</p>
   </div>
 
   <h2>問題怎麼定義</h2>
@@ -47,12 +48,13 @@
     <p>這條路線的代表是〈當機〉那一頁介紹過的 Wuji：用演化演算法搭配深度強化學習，讓 agent 同時追求「把戰鬥打贏」和「探索新的狀態」，因為探索得越廣，越有機會撞上 bug。</p>
     <p>EA SEED 也走同一條路。Bergdahl 等人（CoG 2020）在幾個自製的沙盒關卡裡訓練強化學習 agent，跟依導航網格行走的腳本 agent 比較：強化學習 agent 會自己學會從缺了碰撞的牆穿過去，也找出了關卡裡預先放好的五個卡住玩家的地點。作者估計，同時跑的 agent 每秒可以做 3 萬個動作，相當於 3,000 個人類玩家。</p>
     <p>為了讓這類方法可以互相比較，Li 等人建立了 GBGallery（EMSE 2022）：5 款商業遊戲、76 個真實的工業 bug，bug 編譯在執行檔裡，可以逐一開關，並附有內建的判定程式，基線包括隨機、DQN、A2C、加好奇心的 A2C 與 Wuji。作者的結論是，自動化遊戲測試「還在很早期的階段」。</p>
+    <p>最近的延伸是讓 LLM 幫強化學習定獎勵。SMART（2025 年 12 月預印本；想讓遊戲更新後的測試同時顧到「改過的程式碼有沒有跑到」和「玩法有沒有正常」）讓 LLM 讀程式碼的改動、推測這次更新想做什麼，再據此給 agent 獎勵。在 Overcooked 和 Minecraft 上，改過的程式分支有超過 94% 被跑到，約是傳統強化學習的兩倍，任務完成率 98%。</p>
   </section>
 
   <section class="school">
     <div class="label">流派二 · 用好奇心與新奇度引導探索</div>
     <h3>往沒見過、最意外的地方走，bug 應該就在那裡</h3>
-    <p>強化學習本身不知道哪裡可能有 bug，所以一個常見的做法是加上「好奇心」，獎勵 agent 去沒見過的狀態；GBGallery 的基線裡就有加了好奇心的 A2C。同一組 EA 研究者的 Gordillo 等人（2021）用「越少去過的地方獎勵越高」的計數式好奇心，讓 320 個 agent 探索一張 500 公尺見方的地圖，大約 24 小時可以走遍 90% 的地圖，並找出了預先放進去的卡點和出界漏洞。更進一步的假設是：如果一個模型學會了遊戲正常時長什麼樣，那它最「驚訝」的地方，就可能是 bug。Huynh 與 Pham 在 ACGB 的遊戲裡藏了只在特定區域觸發的 bug，讓五種 agent 各走 2,000 步：隨機亂按、知道遊戲狀態的腳本（只當參考）、兩種獎勵新奇的策略（計數式、RND），以及追求驚訝的策略。結果跟直覺相反：</p>
+    <p>強化學習本身不知道哪裡可能有 bug，所以一個常見的做法是加上「好奇心」，獎勵 agent 去沒見過的狀態；GBGallery 的基線裡就有加了好奇心的 A2C。同一組 EA 研究者的 Gordillo 等人（2021）用「越少去過的地方獎勵越高」的計數式好奇心，讓 320 個 agent 探索一張 500 公尺見方的地圖，大約 24 小時可以走遍 90% 的地圖，並找出了預先放進去的卡點和出界漏洞。更進一步的假設是：如果一個模型學會了遊戲正常時長什麼樣，那它最「驚訝」的地方，就可能是 bug。Huynh 與 Pham 在 ACGB（他們自建的 5 款 64×64 小遊戲，用來測偵測器要不要知道玩家輸入，下面會詳細介紹）的遊戲裡藏了只在特定區域觸發的 bug，讓五種 agent 各走 2,000 步：隨機亂按、知道遊戲狀態的腳本（只當參考）、兩種獎勵新奇的策略（計數式、RND），以及追求驚訝的策略。結果跟直覺相反：</p>
     <figure class="figure">
       <div class="figtitle">追求驚訝的 agent，找到的 bug 比亂按還少</div>
       <div class="figsub">各探索策略觸發 bug 與找到 bug 的比例（每個遊戲 80 個有 bug 的關卡）</div>
@@ -78,6 +80,7 @@
       <figcaption>資料：Jiang、Chen、Chen，GBQA，arXiv 2604.02648，主結果表。只列出同時有一般版與推理版的模型系列。</figcaption>
     </figure>
     <p>步數也有影響：Claude-4.6-Opus 在 QA 模式下，步數上限從 50 拉到 500，recall 從 22.58% 升到 37.90%。作者觀察到，簡單的 bug 大多在前 300 步就找到，困難的 bug 到 500 步都還看不到飽和。</p>
+    <p>另一條思路是乾脆不靠玩去「走到」。GameGen-Verifier（2026 年 5 月預印本；想驗證 LLM 生成的遊戲規則有沒有做對）把規格拆成一條條要檢查的要點，每一條都直接改寫遊戲執行中的狀態、跳到要測的情境，只執行一小段互動再判斷結果。在 100 款遊戲上，它跟人工判斷的一致率最高 92.2%，讓 agent 從頭玩到該情境的做法只有 58.8%。前提是能直接改寫遊戲執行中的狀態。</p>
   </section>
 
   <section class="school">
@@ -99,9 +102,25 @@
     <li><strong>只看畫面，原理上就有盲區。</strong>只看畫面的方法在按鍵錯亂上接近或低於隨機：VideoMAE 外觀距離 0.42、V-JEPA 2 0.52。</li>
     <li><strong>引導探索的目標會把 agent 帶偏。</strong>以「驚訝」為目標的 agent 觸發 bug 的比例（0.275）比亂按（0.435）低，誤報卻多了近 15 倍。</li>
     <li><strong>困難的 bug 需要很長的操作序列。</strong>GBQA 的困難 bug 到 500 步都還沒飽和；開發者也說，所有情境下的所有動作順序在組合上不可能測完。</li>
-    <li><strong>評測用的 bug 幾乎都是人工注入的。</strong>GBQA 的遊戲和 bug 都由多 agent 系統生成再注入，ACGB 的五款 64×64 小遊戲有四款是作者自己寫的（另一款是 MiniGrid），TITAN 用 9 個注入的 bug。真實互動 bug 的分布和難度跟這些 benchmark 像不像，沒有人驗證。</li>
+    <li><strong>評測用的 bug 幾乎都是人工注入的。</strong>GBQA 的遊戲和 bug 都由多 agent 系統生成再注入，ACGB 的五款 64×64 小遊戲有四款是作者自己寫的（另一款是 MiniGrid），TITAN（讓 GPT-4o agent 玩商業 MMORPG 並自動判斷異常的預印本）用 9 個注入的 bug。真實互動 bug 的分布和難度跟這些 benchmark 像不像，沒有人驗證。</li>
     <li><strong>幾乎沒有公開可用的資料。</strong>GBQA 和 ACGB 都還沒公開；GBGallery 只有執行檔，看不到遊戲內部；World of Bugs（一個可開關注入 bug 的 Unity 測試平台）2022 年後就沒再維護。</li>
   </ol>
+
+  <h2 id="next">可行方向</h2>
+  <p>針對上面的缺口，可以直接開始的方向。資源與參數是估計值；完整的實現方式、需要的參數和文獻依據見<a href="directions.html">可行方向</a>。</p>
+  <h3>互動 bug：agent 自動遊玩，用遊戲內部狀態判斷</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>找出按了沒反應、任務無法完成、卡住等 bug；分開報告「沒走到」和「走到但沒認出」。</td></tr>
+      <tr><th>做法</th><td>agent（強化學習或 LLM／VLM）只用鍵盤滑鼠操作；判斷時讀遊戲內部資料：輸入後狀態有沒有變、任務旗標；也可以錄下過關的操作，在新版本重播比對。</td></tr>
+      <tr><th>Benchmark</th><td>部分：GBGallery（只有執行檔）；GBQA、ACGB 未公開。</td></tr>
+      <tr><th>Baseline</th><td>部分：隨機、DQN、A2C、好奇心 A2C、Wuji（GBGallery 內建）。</td></tr>
+      <tr><th>主要隱患</th><td>bug 自己放、自己評估，會被質疑；讀得到內部狀態時很多 bug 用規則就判斷完了，VLM 的角色不明確；每款遊戲都要寫操作介面。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d2">完整說明 →</a></p>
 
   <p>互動 bug 的困難，有一半是「不知道本來應該發生什麼」。最後一頁的資訊類 bug 把這個問題推到極端：畫面完全正常，只是上面寫的東西錯了。</p>
 
@@ -116,6 +135,8 @@
     <li>C. Wang 等人. TITAN. <a href="https://arxiv.org/abs/2509.22170">arXiv 2509.22170</a></li>
     <li>D. T. Huynh, N. N. Pham. When Do Latent World Models Detect Game Glitches?（含 ACGB）. <a href="https://doi.org/10.5281/zenodo.23449952">Zenodo</a></li>
     <li>B. Wilkins, K. Stathis. World of Bugs. <a href="https://arxiv.org/abs/2206.11037">arXiv 2206.11037</a></li>
+    <li>SMART: Coverage-Aware Game Playtesting with LLM-Guided Reinforcement Learning. <a href="https://arxiv.org/abs/2512.12706">arXiv 2512.12706</a>（2025 年 12 月預印本）</li>
+    <li>GameGen-Verifier: Parallel Keypoint-Based Verification for LLM-Generated Games via Runtime State Injection. <a href="https://arxiv.org/abs/2605.07442">arXiv 2605.07442</a>（2026 年 5 月預印本）</li>
   </ol>
 
   <div class="pagenav"><a href="temporal.html">← 時間性</a><a href="information.html">下一頁：資訊與介面 →</a></div>

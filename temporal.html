@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="assets/charts.js"></script>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <li><a href="temporal.html" aria-current="page">時間性</a></li>
     <li><a href="interaction.html">動作與互動</a></li>
     <li><a href="information.html">資訊與介面</a></li>
+    <li><a href="directions.html">可行方向</a></li>
   </ul>
 </nav>
 
@@ -33,8 +34,8 @@
   </div>
 
   <h2>問題怎麼定義</h2>
-  <p>Lewis 等人把「跟時間有關」定義為：要看事件的先後或持續才能判斷的錯誤，例如事件該發生卻沒發生、順序不對、進行中的動作被莫名中斷。Truelove 沿用的類別裡，Event Occurrence 和 Interrupted Event 就屬於這一類。</p>
-  <p>不過，現有研究幾乎沒有直接處理「事件沒發生」這種語意層的問題，處理的是更底層、看動作就能發現的時間性錯誤。TempGlitch 把它整理成五種：<strong>閃爍</strong>（物件忽隱忽現）、<strong>射擊時序錯誤</strong>、<strong>速度異常</strong>、<strong>動畫凍結</strong>（姿勢不動但角色在移動）、<strong>卡在原地</strong>（有移動輸入或跑步動畫，位置卻不動）。其中的閃爍，跟 Truelove 的 Object Persistence（物件沒有正確進出遊戲世界）有部分重疊。另一種常見的時間性問題是<strong>畫面停格</strong>（掉幀），嚴格說屬於效能問題，但偵測方式跟上面相同，同樣要看連續畫面，所以也放在這一頁。</p>
+  <p>Lewis 等人（想回答「遊戲會怎麼壞」；蒐集線上影片和玩家社群的 glitch 來分類）把「跟時間有關」定義為：要看事件的先後或持續才能判斷的錯誤，例如事件該發生卻沒發生、順序不對、進行中的動作被莫名中斷。Truelove 等人（標註 Steam 更新說明、統計哪些 bug 最常被修）沿用的類別裡，Event Occurrence 和 Interrupted Event 就屬於這一類。</p>
+  <p>不過，現有研究幾乎沒有直接處理「事件沒發生」這種語意層的問題，處理的是更底層、看動作就能發現的時間性錯誤。TempGlitch（想量 VLM 能不能抓時間性 glitch，下面會詳細介紹）把它整理成五種：<strong>閃爍</strong>（物件忽隱忽現）、<strong>射擊時序錯誤</strong>、<strong>速度異常</strong>、<strong>動畫凍結</strong>（姿勢不動但角色在移動）、<strong>卡在原地</strong>（有移動輸入或跑步動畫，位置卻不動）。其中的閃爍，跟 Truelove 的 Object Persistence（物件沒有正確進出遊戲世界）有部分重疊。另一種常見的時間性問題是<strong>畫面停格</strong>（掉幀），嚴格說屬於效能問題，但偵測方式跟上面相同，同樣要看連續畫面，所以也放在這一頁。</p>
   <p>值得先記住一個背景：在 Truelove 的 Steam 資料裡，語意層的 Interrupted Event 是最少見的三類之一，Event Occurrence 和 Interrupted Event 都沒有任何復發紀錄。上面那五種動作層的 glitch 在 Truelove 的分類裡沒有獨立的類別，所以它們在真實遊戲裡有多常見，目前沒有直接的數字。</p>
 
   <h2>現在的做法</h2>
@@ -42,7 +43,7 @@
   <section class="school">
     <div class="label">流派一 · 把影片交給 VLM</div>
     <h3>抽幾格畫面，問模型「這段有沒有 glitch」</h3>
-    <p>這一派的起點是一個問題：要看前後變化的 glitch，對模型來說是不是真的比較難？TempGlitch 的作者先用 GPT-5 在 PhysGame 的真實遊戲影片上做了一個小實驗，比較「單張畫面就看得出」和「要看前後變化」兩種 glitch：</p>
+    <p>這一派的起點是一個問題：要看前後變化的 glitch，對模型來說是不是真的比較難？TempGlitch 的作者先用 GPT-5 在 PhysGame（一份收集遊戲裡違反物理常識片段的影片資料集）的真實遊戲影片上做了一個小實驗，比較「單張畫面就看得出」和「要看前後變化」兩種 glitch：</p>
     <figure class="figure">
       <div class="figtitle">三種取樣方式下，要看前後變化的 glitch 都比較少被抓到</div>
       <div class="figsub">GPT-5 在 PhysGame 子集上的 recall，依取樣方式。兩類各只有 50 支影片，每秒 1 張時的差距（0.74 對 0.68）只相當於 3 支影片</div>
@@ -121,6 +122,22 @@
     <li><strong>標籤只到「這支影片有沒有」。</strong>TempGlitch 沒有逐格標註，也沒有玩家輸入紀錄，無法分析模型錯在哪一格。</li>
     <li><strong>真實世界的重要性證據不足。</strong>Steam 更新說明的統計涵蓋的是「事件沒發生、被中斷」這類語意層的類別：Interrupted Event 是最少見的類別之一，它和 Event Occurrence 都從未復發。這一頁研究的動作層 glitch 則沒有對應的頻率資料。兩者都可能只是比較少被寫進更新說明。</li>
   </ol>
+
+  <h2 id="next">可行方向</h2>
+  <p>針對上面的缺口，可以直接開始的方向。資源與參數是估計值；完整的實現方式、需要的參數和文獻依據見<a href="directions.html">可行方向</a>。</p>
+  <h3>時間性 glitch：影片偵測與定位</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>輸入一段遊戲影片，判斷有沒有閃爍、動畫凍結、跳幀、瞬移，並指出時間點。</td></tr>
+      <tr><th>做法</th><td>只用正常影片訓練，用特徵距離或預測誤差當異常分數；或在遊戲裡注入時間性 bug，產生有時間標籤的影片微調影片 VLM；或直接從引擎記錄每格狀態用規則判斷。</td></tr>
+      <tr><th>Benchmark</th><td>有：TempGlitch、VideoGlitchBench、PhysGame。</td></tr>
+      <tr><th>Baseline</th><td>有：VLM 在 TempGlitch 上 49–54%；外觀距離 AUROC 0.69；VideoGlitchBench 最好 F1 約 40%。</td></tr>
+      <tr><th>主要隱患</th><td>主要 benchmark 都還是預印本，競爭可能很快；取樣太稀會漏掉只持續幾格的閃爍，太密運算量暴增。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d3">完整說明 →</a></p>
 
   <p>這一頁的研究大多只看影片，不知道玩家按了什麼。下一頁會看到，有一類 bug 正是卡在這裡：不知道輸入，原理上就判斷不了。</p>
 

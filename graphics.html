@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="assets/charts.js"></script>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <li><a href="temporal.html">時間性</a></li>
     <li><a href="interaction.html">動作與互動</a></li>
     <li><a href="information.html">資訊與介面</a></li>
+    <li><a href="directions.html">可行方向</a></li>
   </ul>
 </nav>
 
@@ -29,11 +30,11 @@
 
   <div class="scene">
     <span class="tag">示意情境</span>
-    <p>新版的材質打包流程漏了一張貼圖。在大部分手機上，那片地面變成一大塊不正常的色塊；但在某些 GPU 上，同一個 bug 的色塊顏色又不一樣。網易的 GLIB 團隊在真實報告裡就遇過這種情況：同一個 bug，在不同裝置上長得不一樣。</p>
+    <p>新版的材質打包流程漏了一張貼圖。在大部分手機上，那片地面變成一大塊不正常的色塊；但在某些 GPU 上，同一個 bug 的色塊顏色又不一樣。網易的 GLIB 團隊（想自動判斷截圖有沒有畫面 glitch，下面會詳細介紹）在真實報告裡就遇過這種情況：同一個 bug，在不同裝置上長得不一樣。</p>
   </div>
 
   <h2>問題怎麼定義</h2>
-  <p>Truelove 等人的定義是「遊戲世界的某個視覺部分被渲染錯誤」。它在 Steam 更新說明裡是第二常見、也是第二常復發的類別；開發者的解釋是畫面的邊角情況太多、測不完，而且畫面對不對本來就有主觀成分。</p>
+  <p>Truelove 等人（想知道哪些 bug 最常被修；一行行標註 Steam 30 款熱門遊戲的更新說明）的定義是「遊戲世界的某個視覺部分被渲染錯誤」。它在 Steam 更新說明裡是第二常見、也是第二常復發的類別；開發者的解釋是畫面的邊角情況太多、測不完，而且畫面對不對本來就有主觀成分。</p>
   <p>這類 bug 有一個方便的特性：<strong>多數單看一張畫面就能判斷</strong>，不需要時間脈絡，也不需要知道玩家做了什麼。所以這一類累積了最多的方法和資料。</p>
 
   <h2>現在的做法</h2>
@@ -49,6 +50,7 @@
       <div class="chart" id="ch-glib"></div>
       <figcaption>資料：Chen 等人，GLIB，FSE 2021，表 3。所有方法的 precision（報出來的有多少是真的）都在 0.93 以上，GLIB 為 1.00。這個接近滿分的數字要搭配下方「現在卡在哪裡」第 3 點一起看。</figcaption>
     </figure>
+    <p>2026 年 10 月的一份預印本把同樣的想法搬到影片上：Rifaat 等人（Ontario Tech；想在同一段畫面裡同時抓出好幾種畫面 bug）在 3 款開源 Unity 遊戲裡裝了 bug 注入器，讓 11 位玩家實際遊玩，隨機注入最多 3 種同時出現的 bug（邊界破洞、貼圖損壞、幾何損壞、深度裁切、深度衝突），切成 77,969 段 2 秒的影片。他們的 ResNet-BiLSTM 在這份資料上 F1 85.78%，勝過一般的 3D 影片分類模型。作者自己也提醒：只有 3 款遊戲、5 種 bug，而且是人工注入的，可能缺少真實 bug 的細節。</p>
   </section>
 
   <section class="school">
@@ -67,8 +69,8 @@
   <section class="school">
     <div class="label">流派三 · 直接問 VLM</div>
     <h3>不訓練，把截圖丟給模型問「哪裡不對」</h3>
-    <p>這一派的共同問題是：模型在公開資料上的分數，換到開發現場還剩多少？2023 年的 GlitchBench 從 Reddit r/GamePhysics 和 Unity 合成場景整理出 593 張 glitch 和 330 張正常畫面，橫跨 205 款遊戲。當時最強的 GPT-4V 平均只有 43.4%，開源模型更低；最難的是動畫和姿勢類的錯誤。兩年後的 VideoGameQA-Bench 用 1,000 張 Steam 社群截圖，GPT-4o 在圖片 glitch 偵測上做到 82.8%。看起來問題快解決了。</p>
-    <p>但同一個研究團隊和 EA 合作，拿一款第一人稱射擊遊戲的內部開發資料重做這個實驗，結果完全不同：</p>
+    <p>這一派的共同問題是：模型在公開資料上的分數，換到開發現場還剩多少？2023 年的 GlitchBench（想量 VLM 能不能認出遊戲 glitch）從 Reddit r/GamePhysics 和 Unity 合成場景整理出 593 張 glitch 和 330 張正常畫面，橫跨 205 款遊戲。當時最強的 GPT-4V 平均只有 43.4%，開源模型更低；最難的是動畫和姿勢類的錯誤。兩年後的 VideoGameQA-Bench（想全面測 VLM 能不能做遊戲 QA，出了截圖、影片等多種題型）用 1,000 張 Steam 社群截圖，GPT-4o 在圖片 glitch 偵測上做到 82.8%。看起來問題快解決了。</p>
+    <p>但同一個研究團隊的 Lu 等人和 EA 合作（論文主題是從 bug 影片找出出事的那一格），在討論段拿一款第一人稱射擊遊戲的內部開發資料重做這個實驗，結果完全不同：</p>
     <figure class="figure">
       <div class="figtitle">同樣的提問方式，在公開截圖上超過八成，在真實開發資料上不到一半</div>
       <div class="figsub">各資料集上報告的 VLM 準確率（工業資料只測了 GPT-4o）</div>
@@ -135,6 +137,35 @@
     <li><strong>抓得到的偏向最顯眼的那一類。</strong>EA 錄影的實驗中，模型抓到的 bug 有近一半是畫面上的錯誤訊息文字；細微的渲染錯誤佔的比例相對少。</li>
   </ol>
 
+  <h2 id="next">可行方向</h2>
+  <p>針對上面的缺口，可以直接開始的方向。資源與參數是估計值；完整的實現方式、需要的參數和文獻依據見<a href="directions.html">可行方向</a>。</p>
+  <h3>單一遊戲：用注入資料微調 VLM</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>輸入一張截圖，輸出有沒有 bug、位置和類別；在這款遊戲的真實 bug 截圖上評估。</td></tr>
+      <tr><th>做法</th><td>改遊戲的渲染程式，隨機換貼圖、改顏色、不畫、位移，同時記下被改的位置當標籤；自動遊玩收截圖；用 LoRA 微調開源 VLM。</td></tr>
+      <tr><th>Benchmark</th><td>部分：沒有單一遊戲的真實 bug 測試集；可借 GLIB 公開測試集、GlitchBench、VideoGameQA-Bench 做跨遊戲對照。</td></tr>
+      <tr><th>Baseline</th><td>有：GLIB、一般影像分類器、只用正常畫面的異常偵測、零樣本 VLM。</td></tr>
+      <tr><th>主要隱患</th><td>注入的 bug 跟真實的不像，模型只學會認注入的模式；真實 bug 太細微時連人都分不出來。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d1">完整說明 →</a></p>
+  <h3>VLM 在正常畫面上的誤報</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>量化並降低 VLM 在正常畫面上的誤報，同時不漏掉真的 bug。</td></tr>
+      <tr><th>做法</th><td>取模型回答的機率來調門檻；加同場景的參考圖；多問幾次看是否一致；把誤報分類（陰影、遮擋、特殊美術風格、特效）。</td></tr>
+      <tr><th>Benchmark</th><td>有：GlitchBench、VideoGameQA-Bench、RefGlitch-Bench。</td></tr>
+      <tr><th>Baseline</th><td>有：EA 錄影上 precision 約 0.50，加裁判模型最好 0.57。</td></tr>
+      <tr><th>主要隱患</th><td>貢獻偏分析；商用模型更新快，結果容易過時；降誤報通常會犧牲 recall。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d5">完整說明 →</a></p>
+
   <p>這一頁的方法都有一個前提：問題在一張畫面裡就看得到。下一頁的 bug 不是這樣，把影片停在任何一格，畫面都完全正常。</p>
 
   <h2>參考資料</h2>
@@ -148,6 +179,7 @@
     <li>W. Lu 等人. How Far Can VLMs Go for Visual Bug Detection? Studying 19,738 Keyframes from 41 Hours of Gameplay Videos. <a href="https://arxiv.org/abs/2603.22706">arXiv 2603.22706</a></li>
     <li>C. Celemin 等人. Evaluating VLMs for Autonomous Agent-Driven Geometry Clipping Detection in Video Game QA. IEEE CoG 2026. <a href="https://arxiv.org/abs/2607.25921">arXiv 2607.25921</a></li>
     <li>RefGlitch-Bench: A Benchmark for Reference-based Gameplay Glitch Detection with Vision-Language Models. <a href="https://arxiv.org/abs/2604.11082">arXiv 2604.11082</a></li>
+    <li>N. Rifaat, F. Morosov, L. Zaman. Multi-Label Perceptual Bug Detection in Video Games using Deep Learning on Gameplay Footage. <a href="https://arxiv.org/abs/2610.08593">arXiv 2610.08593</a>（2026 年 10 月預印本）</li>
   </ol>
 
   <div class="pagenav"><a href="crash.html">← 當機</a><a href="temporal.html">下一頁：時間性 →</a></div>

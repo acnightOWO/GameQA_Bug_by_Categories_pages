@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="assets/charts.js"></script>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <li><a href="temporal.html">時間性</a></li>
     <li><a href="interaction.html">動作與互動</a></li>
     <li><a href="information.html" aria-current="page">資訊與介面</a></li>
+    <li><a href="directions.html">可行方向</a></li>
   </ul>
 </nav>
 
@@ -33,7 +34,7 @@
   </div>
 
   <h2>問題怎麼定義</h2>
-  <p>Truelove 的分類裡有兩個相關類別。<strong>Information</strong> 是「遊戲世界的資訊沒有正確傳達給玩家」，也是 12,122 筆修正裡出現最多的類別；<strong>User Interface</strong> 是「介面元素的外觀、位置或行為不正確」。</p>
+  <p>Truelove 等人（想知道哪些 bug 最常被修；一行行標註 Steam 30 款熱門遊戲的更新說明）的分類裡有兩個相關類別。<strong>Information</strong> 是「遊戲世界的資訊沒有正確傳達給玩家」，也是 12,122 筆修正裡出現最多的類別；<strong>User Interface</strong> 是「介面元素的外觀、位置或行為不正確」。</p>
   <p>實際上這個主題包含兩種很不一樣的錯：</p>
   <ul>
     <li><strong>呈現壞了</strong>：文字重疊、溢出邊框、被截斷。只看畫面就看得出來。</li>
@@ -47,7 +48,7 @@
     <div class="label">流派一 · 在截圖上找版面異常</div>
     <h3>把「文字被畫壞」當成影像辨識問題</h3>
     <p>這條路線先在行動 app 上成形。OwlEye（ASE 2020）用 CNN 判斷截圖有沒有文字重疊、模糊、缺字這類顯示問題，precision 和 recall 都在 85% 左右，還在熱門 app 上找到了開發者沒發現的問題。後續的 Nighthawk 改用自動產生的訓練資料，在 Google Play 與 F-Droid 的 app 上找到 151 個新問題，其中 75 個被確認或修正。</p>
-    <p>但遊戲的介面跟 app 不一樣。網易 GLIB 的論文指出，遊戲裡有些文字以美術字或圖片呈現，文字辨識（OCR）抓不到；而在網易 201 張畫面 glitch 截圖裡，文字類只佔 2%，GLIB 的作者也沒有為文字類生成訓練資料，並承認這是它漏掉文字問題的原因。ByteDance 的 AG3（FSE 2023 業界論文）專門處理多語系遊戲最常見的兩種文字錯誤：<strong>文字重疊</strong>和<strong>文字溢出框外</strong>，並拿 GLIB 在同一批真實截圖上比較：</p>
+    <p>但遊戲的介面跟 app 不一樣。網易 GLIB（FSE 2021；想自動判斷截圖有沒有畫面 glitch，靠改渲染程式產生訓練資料）的論文指出，遊戲裡有些文字以美術字或圖片呈現，文字辨識（OCR）抓不到；而在網易 201 張畫面 glitch 截圖裡，文字類只佔 2%，GLIB 的作者也沒有為文字類生成訓練資料，並承認這是它漏掉文字問題的原因。ByteDance 的 AG3（FSE 2023 業界論文）專門處理多語系遊戲最常見的兩種文字錯誤：<strong>文字重疊</strong>和<strong>文字溢出框外</strong>，並拿 GLIB 在同一批真實截圖上比較：</p>
     <figure class="figure">
       <div class="figtitle">為畫面 glitch 設計的偵測器，幾乎抓不到文字錯誤；專門的模型才行</div>
       <div class="figsub">ByteDance 多語系遊戲的真實截圖上，GLIB 與 AG3 的 precision 與 recall</div>
@@ -71,7 +72,7 @@
   <section class="school">
     <div class="label">流派三 · 讓 VLM 讀畫面</div>
     <h3>不訓練，直接問模型介面上寫了什麼、對不對</h3>
-    <p>VideoGameQA-Bench 有一組「UI 單元測試」，用 Steam 社群截圖問介面上的具體內容。最好的模型 Gemini-2.5-Pro 只答對 40%，比一般的視覺單元測試（53%）還低。</p>
+    <p>VideoGameQA-Bench（NeurIPS 2025；想全面測 VLM 能不能做遊戲 QA，出了截圖、影片等多種題型）有一組「UI 單元測試」，用 Steam 社群截圖問介面上的具體內容。最好的模型 Gemini-2.5-Pro 只答對 40%，比一般的視覺單元測試（53%）還低。</p>
     <p>反過來，如果已經有一段文字描述，讓模型從影片裡找出對應的畫面，UI 與 HUD 類的 bug 表現不錯，F1 達 0.83。而〈畫面渲染〉那一頁提過的 EA 測試錄影實驗中，模型抓到的 bug 有 46.8% 是畫面上的錯誤訊息文字：這類文字很顯眼，是模型最容易抓到的一種。</p>
   </section>
 
@@ -85,6 +86,22 @@
     <li><strong>大型模型讀介面細節仍然吃力。</strong>UI 單元測試最好 40%；在自動化錄影裡，顯眼的除錯文字又會蓋過真正的介面問題。</li>
     <li><strong>無障礙檢查換個資料就變難。</strong>ECHOTEST 在真實遊戲上 precision 98%，在刻意做難的合成資料上降到 73%。</li>
   </ol>
+
+  <h2 id="next">可行方向</h2>
+  <p>針對上面的缺口，可以直接開始的方向。資源與參數是估計值；完整的實現方式、需要的參數和文獻依據見<a href="directions.html">可行方向</a>。</p>
+  <h3>資訊內容錯誤：畫面顯示值對照遊戲內部值</h3>
+  <div class="tablebox">
+  <table>
+    <tbody>
+      <tr><th>目標</th><td>找出數值沒更新、顯示錯誤、說明消失、名稱不一致。</td></tr>
+      <tr><th>做法</th><td>用 OCR 或 VLM 讀出畫面上的文字和數字，跟遊戲內部的值或資料檔比對；拿不到內部值時，比對同一個數值在不同畫面、不同時間是否一致。</td></tr>
+      <tr><th>Benchmark</th><td>缺：沒有公開資料集，只有零星的真實回報。</td></tr>
+      <tr><th>Baseline</th><td>缺：AG3、OwlEye 只處理文字被畫壞，不處理內容錯；只能自建 OCR 加規則、零樣本 VLM 當 baseline。</td></tr>
+      <tr><th>主要隱患</th><td>容易被質疑「直接讀內部值比對就好，不需要看畫面」；遊戲字型和美術字會讓 OCR 出錯。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="directions.html#d4">完整說明 →</a></p>
 
   <h2>參考資料</h2>
   <ol class="refs">
@@ -102,7 +119,7 @@
 
   <p>五個主題看完，有幾件事在每一頁都出現。總覽頁的最後一節把它們放在一起。</p>
 
-  <div class="pagenav"><a href="interaction.html">← 動作與互動</a><a href="index.html#common">回到總覽：五個主題的共同處境</a></div>
+  <div class="pagenav"><a href="interaction.html">← 動作與互動</a><a href="directions.html">下一頁：可行方向 →</a></div>
 </main>
 
 <script>

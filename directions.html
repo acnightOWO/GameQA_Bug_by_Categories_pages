@@ -41,7 +41,64 @@
 <main class="page">
   <div class="kicker">研究方向</div>
   <h1>現在可以進行的方向</h1>
-  <p class="lede">七個獨立的方向。每個列出目標、實現方式、需要的資源與參數、現成的 benchmark 和 baseline，以及可能的隱患。資源與參數是估計值，實際要看遊戲和模型。</p>
+  <p class="lede">先講大結論：每一類 bug 都會碰到的三個根本問題，以及可能的解決方式。接著是七個獨立的方向，每個列出目標、實現方式、需要的資源與參數、現成的 benchmark 和 baseline，以及可能的隱患。資源與參數是估計值，實際要看遊戲和模型。</p>
+
+  <h2 id="big">大結論：這個領域的三個大哉問</h2>
+  <p>五類 bug 看起來各做各的，但自動找 bug 不管哪一類，都要過三關：<strong>用什麼資料訓練 → 能不能走到 bug 那裡 → 走到了能不能認出來</strong>。每一關都還沒有好答案。</p>
+
+  <div class="callout">
+    <p><strong>資料：要訓練就要 bug，只好自己生成，但生成的跟真實的不像</strong></p>
+    <ul>
+      <li>真實的 bug 少、沒有標註，好資料又多半在業界、不公開。</li>
+      <li>所以研究大多自己注入 bug：改渲染程式、改遊戲邏輯，要多少有多少。</li>
+      <li>但注入的 bug 太規律，種類也常跟真實分布不符。模型在自建資料上分數漂亮，換到開發現場就掉下來（公開截圖 82.8%，工業截圖 46%）。</li>
+      <li>結果是不確定模型學到的是真實的 bug，還是注入器的固定樣子。</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <p><strong>走到：AI 沒找到 bug 時，分不出原因</strong></p>
+    <ul>
+      <li>多數研究假設 bug 已經在截圖或影片裡，只問認不認得出來。真實測試卻要先走到那裡、按對順序，bug 才會出現。</li>
+      <li>自己探索時：沒找到可能是沒走到，也可能是走到了沒認出來。</li>
+      <li>照 bug report 重現時：回報可能不完整、AI 拆的步驟可能有錯，bug 也可能已經被修掉或不是每次都會發生。</li>
+      <li>分不出原因，就不知道該改進探索、辨識還是資料。</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <p><strong>認出：正確答案因遊戲而異，有時甚至不在畫面上</strong></p>
+    <ul>
+      <li>同樣一個畫面，在這款遊戲是 bug，換一種場景或美術風格可能就是正常的。靠牆、遮蔽這類模稜兩可的畫面最容易誤報。</li>
+      <li>有些 bug 光看畫面原理上就判斷不了：互動要知道玩家按了什麼，資訊要知道正確數值，時間性要看前後變化，而現在的影片模型連時間變化都看不太出來。</li>
+      <li>所以通用模型很難泛化；專用模型準，但每款遊戲都要重做。</li>
+    </ul>
+  </div>
+
+  <h3>可能的解決方式</h3>
+  <p>三關都還不能一次解決，比較實際的是把題目縮小，在每一關各往前推一步：</p>
+  <ul>
+    <li><strong>資料：讓生成的 bug 貼近真實，並用真實資料驗證。</strong>
+      <ul>
+        <li>先整理真實 bug 長什麼樣、多常見，再照這個分布決定要注入什麼。</li>
+        <li>範圍縮到單一遊戲，用注入資料訓練，但測試集一定放真實 bug 和模稜兩可的正常畫面。</li>
+      </ul>
+    </li>
+    <li><strong>走到：把「有沒有觸發」和「有沒有認出」拆開來量。</strong>
+      <ul>
+        <li>讀遊戲內部狀態，直接知道 bug 有沒有被觸發，再單獨評估辨識能力。</li>
+        <li>重現 bug report 時，把回報整理成結構化步驟，並給 agent 遊戲專用的操作介面。</li>
+      </ul>
+    </li>
+    <li><strong>認出：不要只靠畫面，把畫面以外的資訊交給偵測器。</strong>
+      <ul>
+        <li>互動 bug 加上玩家輸入和遊戲狀態，資訊 bug 拿畫面顯示值對照遊戲內部值。</li>
+        <li>時間性 bug 改輸入設計：短片段、高取樣，或直接給相鄰畫面的變化。</li>
+        <li>接受「每款遊戲各做一份」，用參考畫面和門檻校準壓低誤報。</li>
+      </ul>
+    </li>
+  </ul>
+  <p>下面的各個方向，就是把這些做法各自展開：目標、實現方式、需要的資源、現成的 benchmark 和可能的隱患。</p>
 
   <details class="catlist">
     <summary>本頁提到的論文在做什麼（點開）</summary>
@@ -70,7 +127,8 @@
         <tr><td>RefGlitch-Bench（預印本）</td><td>看給一張參考畫面能不能幫 VLM</td><td>Godot 場景裡 1,000 組參考與測試配對</td></tr>
         <tr><td>TempGlitch（預印本）</td><td>量 VLM 能不能抓時間性 glitch</td><td>在 Godot 範例注入 glitch，每支配一支很像的正常影片</td></tr>
         <tr><td>Huynh &amp; Pham（預印本，含 ACGB）</td><td>只用正常影片學「什麼叫正常」；以及偵測器要不要知道玩家輸入</td><td>比較外觀距離和下一格預測兩種算法；自建 5 款小遊戲注入 glitch</td></tr>
-        <tr><td>PhysGame</td><td>收集遊戲裡違反物理常識的影片</td><td>整理成 880 支影片的資料集</td></tr>
+        <tr><td>PhysGame／PhysVLM</td><td>收集遊戲裡違反物理常識的影片，並訓練能看出來的模型</td><td>整理成 880 支影片的資料集；用 14 萬筆問答微調影片模型，再用故意弄錯的答案做 DPO</td></tr>
+        <tr><td>Rifaat 等人（預印本）</td><td>在同一段畫面裡同時抓出好幾種畫面 bug</td><td>3 款 Unity 遊戲裝 bug 注入器，切成 2 秒片段訓練影片分類器</td></tr>
         <tr><td>VideoGlitchBench（ACM MM 2026，預印本）</td><td>讓模型說出發生什麼、在第幾秒</td><td>5,238 支 Reddit 遊戲影片標時間；GliDe 讓模型分段掃描、推理、定位</td></tr>
         <tr><td>TimeBlind／MotionBlind</td><td>測通用影片模型懂不懂時間變化</td><td>成對影片只差時間結構；測速度、幅度、方向</td></tr>
         <tr><td>GELID（EMSE 2023）</td><td>從實況影片找出遊戲問題</td><td>用實況主的字幕切片段，再分類、分群</td></tr>
@@ -84,6 +142,7 @@
 
   <div class="toc">
     <ol>
+      <li><a href="#big">大結論：三個大哉問與解法</a></li>
       <li><a href="#d1">單一遊戲：用 mutation 資料微調 VLM 偵測視覺 bug</a></li>
       <li><a href="#d2">互動 bug：agent 自動遊玩，用遊戲內部狀態判斷</a></li>
       <li><a href="#d3">時間性 glitch：影片偵測與定位</a></li>
@@ -263,7 +322,7 @@
 
   <h2>參考資料</h2>
   <ol class="refs">
-    <li>Lewis 2010；Truelove 2021；Butt 2023；VGBT 2025；GLIB（FSE 2021）；World of Bugs；GlitchBench（CVPR 2024）；VideoGameQA-Bench（NeurIPS 2025）；Lu 等人 arXiv 2508.04895、2603.22706；Celemin 等人 arXiv 2607.25921；RefGlitch-Bench arXiv 2604.11082；TempGlitch arXiv 2605.21443；Huynh &amp; Pham 2026；VideoGlitchBench arXiv 2604.07818；PhysGame arXiv 2412.01800；TimeBlind；MotionBlind；GELID（EMSE 2023）；GBGallery（EMSE 2022）；GBQA arXiv 2604.02648；TITAN arXiv 2509.22170；Wuji（ASE 2019）；Politowski 等人；AG3（FSE 2023）；OwlEye（ASE 2020）；ECHOTEST；BugCraft arXiv 2503.20036；AdbGPT（ICSE 2024）；OSSGameBench（MSR 2026）。</li>
+    <li>Lewis 2010；Truelove 2021；Butt 2023；VGBT 2025；GLIB（FSE 2021）；World of Bugs；GlitchBench（CVPR 2024）；VideoGameQA-Bench（NeurIPS 2025）；Lu 等人 arXiv 2508.04895、2603.22706；Celemin 等人 arXiv 2607.25921；RefGlitch-Bench arXiv 2604.11082；TempGlitch arXiv 2605.21443；Huynh &amp; Pham 2026；VideoGlitchBench arXiv 2604.07818；PhysGame／PhysVLM arXiv 2412.01800；Rifaat 等人 arXiv 2610.08593；TimeBlind；MotionBlind；GELID（EMSE 2023）；GBGallery（EMSE 2022）；GBQA arXiv 2604.02648；TITAN arXiv 2509.22170；Wuji（ASE 2019）；Politowski 等人；AG3（FSE 2023）；OwlEye（ASE 2020）；ECHOTEST；BugCraft arXiv 2503.20036；AdbGPT（ICSE 2024）；OSSGameBench（MSR 2026）。</li>
     <li>OSSGameBench：<a href="https://zenodo.org/records/18359123">Zenodo</a></li>
     <li>OpenMW 回報：<a href="https://gitlab.com/OpenMW/openmw/-/issues/8270">#8270</a> · <a href="https://gitlab.com/OpenMW/openmw/-/issues/6687">#6687</a> · <a href="https://gitlab.com/OpenMW/openmw/-/issues/9461">#9461</a></li>
     <li>0 A.D.：<a href="https://gitea.wildfiregames.com/0ad/0ad">Gitea</a> · <a href="https://wildfiregames.com/forum/topic/139404-units-are-invisible-except-for-weapons-and-heads/">單位隱形</a> · <a href="https://wildfiregames.com/forum/topic/98808-graphics-rendering-issue-in-a26/">渲染問題</a></li>

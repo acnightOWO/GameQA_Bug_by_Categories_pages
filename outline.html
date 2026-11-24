@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>報告大綱圖</title>
+<link rel="stylesheet" href="assets/style.css?v=2">
+<style>
+  .ol-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  .ol-wrap h1 { font-size: 24px; margin: 0 0 18px; }
+  .stage { border: 1.5px solid var(--accent); border-radius: 10px; padding: 12px 16px; background: var(--accent-soft); }
+  .stage h2 { margin: 0 0 6px; font-size: 17px; border: 0; padding: 0; }
+  .stage .num { display: inline-block; min-width: 1.6em; color: var(--accent); font-weight: 900; }
+  .stage p { margin: 2px 0; font-size: 14.5px; line-height: 1.6; }
+  .stage .key { font-weight: 700; }
+  .arrow { text-align: center; color: var(--accent); font-size: 22px; line-height: 1; margin: 6px 0; }
+  .grid { display: grid; gap: 8px; margin-top: 8px; }
+  .g5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cell { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; line-height: 1.55; }
+  .cell b { display: block; font-size: 14.5px; margin-bottom: 2px; }
+  .cell .lbl { color: var(--muted); font-size: 12px; }
+  @media (max-width: 760px) { .g5, .g3 { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<div class="ol-wrap">
+  <h1>報告大綱：遊戲自動 QA 與 bug 分類</h1>
+
+  <div class="stage">
+    <h2>為什麼要自動化遊戲 QA</h2>
+    <p>業界幾乎全靠人工試玩 · 動作組合測不完 · 機器可以大量平行玩</p>
+    <p class="key">難處分兩半：<u>走到</u> bug 那裡，和 <u>認出</u> 那是 bug</p>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="stage">
+    <h2>為什麼要先分類</h2>
+    <p class="key">不同的 bug，判斷時需要的資訊不同 → 分類決定能用什麼方法</p>
+    <p>現有分類：Lewis 11 類 → Truelove 20 類 → Butt 63 類 ⇒ 本報告整併成 5 類</p>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="stage">
+    <h2>每一類做到哪裡</h2>
+    <div class="grid g5">
+      <div class="cell"><b>當機</b><span class="lbl">需要</span><br>重現步驟<br><span class="lbl">做法</span><br>探索 agent、依回報重現<br><span class="lbl">卡點</span><br>遊戲版資料幾乎只有一款</div>
+      <div class="cell"><b>畫面渲染</b><span class="lbl">需要</span><br>截圖<br><span class="lbl">做法</span><br>造壞畫面訓練、問 VLM、給參考圖<br><span class="lbl">卡點</span><br>公開 82.8% → 工業 46%</div>
+      <div class="cell"><b>時間性</b><span class="lbl">需要</span><br>影片<br><span class="lbl">做法</span><br>影片 VLM、只學正常影片<br><span class="lbl">卡點</span><br>VLM 接近亂猜</div>
+      <div class="cell"><b>動作與互動</b><span class="lbl">需要</span><br>影片＋玩家輸入<br><span class="lbl">做法</span><br>agent＋遊戲內部狀態<br><span class="lbl">卡點</span><br>沒走到 vs 沒認出</div>
+      <div class="cell"><b>資訊與介面</b><span class="lbl">需要</span><br>正確答案<br><span class="lbl">做法</span><br>截圖查版面、字幕比對<br><span class="lbl">卡點</span><br>內容寫錯幾乎沒人做</div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="stage">
+    <h2>三個大哉問：資料 → 走到 → 認出</h2>
+    <div class="grid g3">
+      <div class="cell"><b>資料</b>要訓練就要 bug → 只好自己生成 → 太規律、不像真的，模型看不到真實 bug</div>
+      <div class="cell"><b>走到</b>AI 沒找到 bug → 分不出是沒走到、沒認出，還是本來就沒有</div>
+      <div class="cell"><b>認出</b>正確答案因遊戲、場景、風格而異，有時不在畫面上 → 很難泛化</div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="stage">
+    <h2>可能的解決方式（題目縮小，每關推一步）</h2>
+    <div class="grid g3">
+      <div class="cell"><b>資料：貼近真實</b>照真實 bug 分布決定注入什麼<br>單一遊戲微調，用真實 bug 測</div>
+      <div class="cell"><b>走到：拆開來量</b>讀遊戲內部狀態確認有沒有觸發<br>回報 → 結構化步驟 → 專用介面重現</div>
+      <div class="cell"><b>認出：不只看畫面</b>加輸入、遊戲狀態、正確數值<br>時間性改輸入設計<br>參考畫面與門檻壓誤報</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

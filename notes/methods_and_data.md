@@ -131,6 +131,7 @@
 |---|---|---|---|
 | 把影片交給 VLM | TempGlitch 前導（GPT-5、PhysGame 子集，各 50 支） | | recall 單張可見 vs 要看變化：I-frame 0.72 / 0.48、1 fps 0.74 / 0.68、2 fps 0.80 / 0.68 |
 | | TempGlitch ⚠（Alberta + Sony 2026） | Godot 兩個範例、750 有 glitch + 750 刻意相似的正常 | 12 個模型 49–54%；1 → 5 fps 幾乎不變；precision 多在 50–68% |
+| | PhysVLM（arXiv 2412.01800，作者自報） | PhysInstruct 140,057 筆問答 + PhysDPO | SFT + DPO 後 PhysGame 約 59.5%，比 GPT-4o（56.1%）高 3.4；最佳開源基線 47.7%；選擇題，非偵測 |
 | | TimeBlind（通用影片） | 成對影片只差時間結構 | 最強 48.2%，人類 98.2% |
 | 只看正常影片 | Azizi & Zaman（CoG 2023）LSTM | 兩款 FPS | 無量化結果 |
 | | Huynh & Pham ⚠（Zenodo 2026） | TempGlitch | VideoMAE 外觀距離 AUROC 0.69（最佳）；各類：VideoMAE 0.64–0.75；V-JEPA 2 動畫凍結 0.396；LeWM 最差；有效秩 1.13 → 21.30 但 AUROC 無改善 |
